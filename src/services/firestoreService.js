@@ -1,6 +1,15 @@
 import { db } from "../App";
-import { collection, doc, addDoc, setDoc, getDocs, getDoc, updateDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  addDoc,
+  getDocs,
+  getDoc,
+  updateDoc,
+  Timestamp
+} from "firebase/firestore";
 
+// ✅ Save new document with generated questions
 export async function saveDocument(userId, text, tfQuestions, mcqQuestions) {
   const ref = await addDoc(collection(db, "users", userId, "documents"), {
     text,
@@ -11,17 +20,20 @@ export async function saveDocument(userId, text, tfQuestions, mcqQuestions) {
   return ref.id;
 }
 
+// ✅ Get all user's documents
 export async function getUserDocuments(userId) {
   const snap = await getDocs(collection(db, "users", userId, "documents"));
   return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
+// ✅ Get quiz questions for a specific document
 export async function getQuestionsForDocument(userId, docId, type) {
   const ref = doc(db, "users", userId, "documents", docId);
   const snap = await getDoc(ref);
   return snap.exists() ? snap.data().questions[type] || [] : [];
 }
 
+// ✅ Record results for quiz attempts
 export async function recordQuizResults(userId, docId, type, results) {
   const ref = doc(db, "users", userId, "documents", docId);
   const snap = await getDoc(ref);
@@ -29,6 +41,7 @@ export async function recordQuizResults(userId, docId, type, results) {
   await updateDoc(ref, { [`results.${type}`]: [...prev, ...results] });
 }
 
+// ✅ Lifetime accuracy stats
 export async function getUserStats(userId) {
   const snap = await getDocs(collection(db, "users", userId, "documents"));
   const base = { total: 0, correct: 0 };
@@ -54,4 +67,43 @@ export async function getUserStats(userId) {
     mcq: calc("mcq"),
     tf: calc("tf")
   };
+}
+
+// ✅ Weekly stats + streak map (past 7 days)
+export async function getUserStatsThisWeek(userId) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekAgo = new Date(today);
+  weekAgo.setDate(weekAgo.getDate() - 6);
+
+  const snap = await getDocs(collection(db, "users", userId, "documents"));
+
+  let docs = 0, quizzes = 0, correct = 0, total = 0;
+  const activityMap = Array(7).fill(false);
+
+  snap.docs.forEach(doc => {
+    const data = doc.data();
+    const created = new Date(data.createdAt?.seconds * 1000);
+    const dayDiff = Math.floor((created - weekAgo) / (1000 * 60 * 60 * 24));
+    if (dayDiff >= 0 && dayDiff < 7) {
+      activityMap[dayDiff] = true;
+      docs++;
+    }
+
+    const results = data.results || {};
+    for (const type of ["mcq", "tf"]) {
+      if (results[type]) {
+        const recent = results[type].filter(() => created >= weekAgo);
+        if (recent.length > 0 && dayDiff >= 0 && dayDiff < 7) {
+          activityMap[dayDiff] = true;
+          quizzes += 1;
+        }
+        total += recent.length;
+        correct += recent.filter(r => r.correct).length;
+      }
+    }
+  });
+
+  const accuracy = total ? Math.round((correct / total) * 100) : 0;
+  return { docs, quizzes, accuracy, streak: activityMap };
 }

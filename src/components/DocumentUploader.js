@@ -8,7 +8,7 @@ export default function DocumentUploader({ onDocumentCreated }) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const generateQuestions = async () => {
+  const generateQuestions = async ()     => {
     setLoading(true);
     const [tfRes, mcqRes] = await Promise.all([
       axios.post("https://nougat-omega.vercel.app/nougat/tftext", { text }),
