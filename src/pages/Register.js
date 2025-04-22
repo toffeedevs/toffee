@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Register() {
+  const { register } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -19,12 +19,28 @@ export default function Register() {
   };
 
   return (
-    <div className="flex justify-center mt-20 text-white">
-      <form onSubmit={handleSubmit} className="bg-gray-900 p-6 rounded shadow w-96 space-y-4">
-        <h2 className="text-xl font-bold text-purple-500">Create a Toffee Account</h2>
-        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2 bg-black border border-purple-500 rounded" required />
-        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-2 bg-black border border-purple-500 rounded" required />
-        <button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 rounded p-2">Register</button>
+    <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-black to-gray-900 text-white">
+      <form onSubmit={handleSubmit} className="bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-md space-y-4">
+        <h2 className="text-xl font-bold text-purple-400 mb-4">Create Your Account</h2>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full p-3 bg-black border border-purple-600 rounded placeholder-gray-400 text-sm"
+          placeholder="Email"
+          required
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full p-3 bg-black border border-purple-600 rounded placeholder-gray-400 text-sm"
+          placeholder="Password"
+          required
+        />
+        <button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 rounded py-2 font-semibold">
+          Register
+        </button>
       </form>
     </div>
   );
