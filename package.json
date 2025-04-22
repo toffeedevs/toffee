@@ -45,5 +45,5 @@
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.1"
   },
-  "proxy": "https://nougat-eight.vercel.app/"
+  "proxy": "https://nougat-omega.vercel.app/"
 }

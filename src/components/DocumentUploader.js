@@ -11,8 +11,8 @@ export default function DocumentUploader({ onDocumentCreated }) {
   const generateQuestions = async () => {
     setLoading(true);
     const [tfRes, mcqRes] = await Promise.all([
-      axios.post("https://nougat-woad.vercel.app/nougat/tftext", { text }),
-      axios.post("https://nougat-woad.vercel.app/nougat/mcqtext", { text })
+      axios.post("https://nougat-omega.vercel.app/nougat/tftext", { text }),
+      axios.post("https://nougat-omega.vercel.app/nougat/mcqtext", { text })
     ]);
     const docId = await saveDocument(currentUser.uid, text, tfRes.data.questions, mcqRes.data.questions);
     setLoading(false);
