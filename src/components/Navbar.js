@@ -14,7 +14,7 @@ export default function Navbar() {
   return (
     <nav className="bg-black border-b border-purple-700 px-6 py-4 flex justify-between items-center">
       <div className="text-purple-500 font-bold text-xl tracking-wide">
-        <Link to="/">Toffee</Link>
+        <Link to="/">toffee</Link>
       </div>
       <div className="flex gap-6 text-sm text-white">
         {currentUser && (

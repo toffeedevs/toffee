@@ -23,8 +23,8 @@ export default function Home() {
       <div
           className="flex flex-col items-center justify-center min-h-screen px-4 bg-gradient-to-b from-black to-gray-900 text-white text-center">
           <img src={logo} alt="Toffee" className="w-20 mb-4"/>
-          <h1 className="text-4xl font-bold text-purple-500 mb-2">Welcome to Toffee</h1>
-          <h4 className="text-2xl font-bold text-white-250 mb-2">Make information stick.</h4>
+          <h1 className="text-4xl font-bold text-purple-500 mb-2">toffee</h1>
+          <h4 className="text-2xl font-bold text-white-250 mb-2">make information stick.</h4>
           <p className="text-gray-400 max-w-xl mb-6">
               Generate AI-powered quizzes from your study materials. Practice smarter with MCQ and True/False modes.
               Track your stats. Master anything.
