@@ -9,6 +9,9 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import QuizTaker from "./components/QuizTaker";
+import ResultsViewer from "./components/ResultsViewer";
+import Stats from "./components/Stats";
 import './index.css';
 
 const firebaseConfig = {
@@ -21,37 +24,37 @@ const firebaseConfig = {
   measurementId: "G-F0EEBXC8M3"
 };
 
-
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 export default function App() {
-  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setChecking(false);
     });
-    return unsub;
+    return () => unsubscribe();
   }, []);
 
-  if (loading) return <div className="text-white text-center mt-10">Loading...</div>;
+  if (checking) return <div className="text-white text-center mt-10">Loading...</div>;
 
   return (
     <AuthProvider>
       <Router>
-        <div className="bg-black min-h-screen text-white font-sans">
-          <Navbar />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
-            <Route path="/register" element={!user ? <Register /> : <Navigate to="/dashboard" />} />
-            <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
-          </Routes>
-        </div>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
+          <Route path="/register" element={!user ? <Register /> : <Navigate to="/dashboard" />} />
+          <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
+          <Route path="/quiz/:type" element={user ? <QuizTaker /> : <Navigate to="/login" />} />
+          <Route path="/results" element={user ? <ResultsViewer /> : <Navigate to="/login" />} />
+          <Route path="/stats" element={user ? <Stats /> : <Navigate to="/login" />} />
+        </Routes>
       </Router>
     </AuthProvider>
   );

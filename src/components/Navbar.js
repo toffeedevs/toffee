@@ -14,17 +14,19 @@ export default function Navbar() {
 
   return (
     <nav className="bg-black border-b border-purple-700 p-4 flex justify-between items-center">
-      <Link to="/" className="flex items-center gap-2 text-purple-500 font-bold text-xl">
-        <img src={logo} className="w-6" />
-        Toffee
-      </Link>
-      <div className="flex items-center gap-4">
-        {currentUser ? (
+      <div className="flex items-center gap-2">
+        <img src={logo} alt="Toffee Logo" className="w-6 h-6" />
+        <Link to="/" className="text-purple-500 font-bold text-xl">Toffee</Link>
+      </div>
+      <div className="flex gap-4 text-white">
+        {currentUser && (
           <>
             <Link to="/dashboard">Dashboard</Link>
-            <button onClick={handleLogout} className="text-red-500">Logout</button>
+            <Link to="/stats">Stats</Link>
+            <button onClick={handleLogout} className="text-red-400">Logout</button>
           </>
-        ) : (
+        )}
+        {!currentUser && (
           <>
             <Link to="/login">Login</Link>
             <Link to="/register" className="border border-purple-500 px-2 py-1 rounded">Register</Link>
