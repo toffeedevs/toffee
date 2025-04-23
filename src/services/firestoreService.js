@@ -8,6 +8,12 @@ import {
   updateDoc,
   Timestamp
 } from "firebase/firestore";
+import { deleteDoc } from "firebase/firestore";
+
+export async function deleteDocument(userId, docId) {
+  const ref = doc(db, "users", userId, "documents", docId);
+  await deleteDoc(ref);
+}
 
 export async function saveDocument(userId, text, tfQuestions, mcqQuestions, title = "") {
   const ref = await addDoc(collection(db, "users", userId, "documents"), {
