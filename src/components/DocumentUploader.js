@@ -8,16 +8,50 @@ export default function DocumentUploader({ onDocumentCreated }) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const generateQuestions = async ()     => {
+  const generateSummary = async () => {
+    const instruction = `
+      Summarize this study content in 1 short, catchy sentence suitable as a flashcard deck title. Avoid generic words like 'summary' or 'overview'.
+
+      TEXT:
+      ${text}
+
+      Only return the summary text. No formatting.
+    `;
+
+    const res = await axios.post("https://openrouter.ai/api/v1/chat/completions", {
+      model: "google/gemini-2.0-flash-lite-001",
+      messages: [{ role: "user", content: instruction }],
+    }, {
+      headers: {
+        Authorization: `Bearer ${process.env.REACT_APP_OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+      }
+    });
+
+    return res.data.choices[0].message.content.trim();
+  };
+
+  const generateQuestions = async () => {
     setLoading(true);
+
+    const title = await generateSummary();
+
     const [tfRes, mcqRes] = await Promise.all([
       axios.post("https://nougat-omega.vercel.app/nougat/tftext", { text }),
       axios.post("https://nougat-omega.vercel.app/nougat/mcqtext", { text })
     ]);
-    const docId = await saveDocument(currentUser.uid, text, tfRes.data.questions, mcqRes.data.questions);
+
+    const docId = await saveDocument(
+      currentUser.uid,
+      text,
+      tfRes.data.questions,
+      mcqRes.data.questions,
+      title // pass title to Firestore
+    );
+
     setLoading(false);
-    onDocumentCreated(docId);
     setText("");
+    onDocumentCreated(docId);
   };
 
   return (

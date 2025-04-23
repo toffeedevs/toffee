@@ -9,9 +9,9 @@ import {
   Timestamp
 } from "firebase/firestore";
 
-// ✅ Save new document with generated questions
-export async function saveDocument(userId, text, tfQuestions, mcqQuestions) {
+export async function saveDocument(userId, text, tfQuestions, mcqQuestions, title = "") {
   const ref = await addDoc(collection(db, "users", userId, "documents"), {
+    title,
     text,
     createdAt: new Date(),
     questions: { tf: tfQuestions, mcq: mcqQuestions },
@@ -20,20 +20,20 @@ export async function saveDocument(userId, text, tfQuestions, mcqQuestions) {
   return ref.id;
 }
 
+
 // ✅ Get all user's documents
 export async function getUserDocuments(userId) {
   const snap = await getDocs(collection(db, "users", userId, "documents"));
   return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-// ✅ Get quiz questions for a specific document
 export async function getQuestionsForDocument(userId, docId, type) {
   const ref = doc(db, "users", userId, "documents", docId);
   const snap = await getDoc(ref);
   return snap.exists() ? snap.data().questions[type] || [] : [];
 }
 
-// ✅ Record results for quiz attempts
+
 export async function recordQuizResults(userId, docId, type, results) {
   const ref = doc(db, "users", userId, "documents", docId);
   const snap = await getDoc(ref);
@@ -41,7 +41,6 @@ export async function recordQuizResults(userId, docId, type, results) {
   await updateDoc(ref, { [`results.${type}`]: [...prev, ...results] });
 }
 
-// ✅ Lifetime accuracy stats
 export async function getUserStats(userId) {
   const snap = await getDocs(collection(db, "users", userId, "documents"));
   const base = { total: 0, correct: 0 };
@@ -69,7 +68,6 @@ export async function getUserStats(userId) {
   };
 }
 
-// ✅ Weekly stats + streak map (past 7 days)
 export async function getUserStatsThisWeek(userId) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
