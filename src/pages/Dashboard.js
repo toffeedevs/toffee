@@ -46,6 +46,7 @@ export default function Dashboard() {
             createdAt={new Date(doc.createdAt.seconds * 1000).toLocaleString()}
             onTakeMCQ={() => navigate("/quiz/mcq", { state: { docId: doc.id, type: "mcq" } })}
             onTakeTF={() => navigate("/quiz/tf", { state: { docId: doc.id, type: "tf" } })}
+            onTakeFITB={() => navigate("/quiz/fitb", { state: { docId: doc.id, type: "fitb" } })}
             onDelete={() => handleDelete(doc.id)}
           />
         ))}

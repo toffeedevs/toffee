@@ -5,8 +5,7 @@ import {
   addDoc,
   getDocs,
   getDoc,
-  updateDoc,
-  Timestamp
+  updateDoc
 } from "firebase/firestore";
 import { deleteDoc } from "firebase/firestore";
 
@@ -15,19 +14,17 @@ export async function deleteDocument(userId, docId) {
   await deleteDoc(ref);
 }
 
-export async function saveDocument(userId, text, tfQuestions, mcqQuestions, title = "") {
+export async function saveDocument(userId, text, tfQuestions, mcqQuestions, fitbQuestions, title = "") {
   const ref = await addDoc(collection(db, "users", userId, "documents"), {
     title,
     text,
     createdAt: new Date(),
-    questions: { tf: tfQuestions, mcq: mcqQuestions },
-    results: { tf: [], mcq: [] }
+    questions: { tf: tfQuestions, mcq: mcqQuestions, fitb: fitbQuestions },
+    results: { tf: [], mcq: [], fitb: [] }
   });
   return ref.id;
 }
 
-
-// ✅ Get all user's documents
 export async function getUserDocuments(userId) {
   const snap = await getDocs(collection(db, "users", userId, "documents"));
   return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -39,7 +36,6 @@ export async function getQuestionsForDocument(userId, docId, type) {
   return snap.exists() ? snap.data().questions[type] || [] : [];
 }
 
-
 export async function recordQuizResults(userId, docId, type, results) {
   const ref = doc(db, "users", userId, "documents", docId);
   const snap = await getDoc(ref);
@@ -50,11 +46,11 @@ export async function recordQuizResults(userId, docId, type, results) {
 export async function getUserStats(userId) {
   const snap = await getDocs(collection(db, "users", userId, "documents"));
   const base = { total: 0, correct: 0 };
-  const agg = { mcq: { ...base }, tf: { ...base } };
+  const agg = { mcq: { ...base }, tf: { ...base }, fitb: { ...base } };
 
   snap.docs.forEach(doc => {
     const r = doc.data().results || {};
-    for (const type of ["mcq", "tf"]) {
+    for (const type of ["mcq", "tf", "fitb"]) {
       if (r[type]) {
         agg[type].total += r[type].length;
         agg[type].correct += r[type].filter(res => res.correct).length;
@@ -70,7 +66,8 @@ export async function getUserStats(userId) {
 
   return {
     mcq: calc("mcq"),
-    tf: calc("tf")
+    tf: calc("tf"),
+    fitb: calc("fitb")
   };
 }
 
@@ -95,7 +92,7 @@ export async function getUserStatsThisWeek(userId) {
     }
 
     const results = data.results || {};
-    for (const type of ["mcq", "tf"]) {
+    for (const type of ["mcq", "tf", "fitb"]) {
       if (results[type]) {
         const recent = results[type].filter(() => created >= weekAgo);
         if (recent.length > 0 && dayDiff >= 0 && dayDiff < 7) {

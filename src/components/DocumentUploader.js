@@ -8,7 +8,7 @@ GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3
 
 export default function DocumentUploader({ onDocumentCreated }) {
   const { currentUser } = useAuth();
-  const [mode, setMode] = useState(null); // null | "text" | "file"
+  const [mode, setMode] = useState(null);
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -80,9 +80,10 @@ export default function DocumentUploader({ onDocumentCreated }) {
 
     const title = await generateSummary();
 
-    const [tfRes, mcqRes] = await Promise.all([
-      axios.post("https://nougat-omega.vercel.app/nougat/tftext", { text }), // ✅ updated endpoint
-      axios.post("https://nougat-omega.vercel.app/nougat/mcqtext", { text })
+    const [tfRes, mcqRes, fitbRes] = await Promise.all([
+      axios.post("https://nougat-omega.vercel.app/nougat/tftext", { text }),
+      axios.post("https://nougat-omega.vercel.app/nougat/mcqtext", { text }),
+      axios.post("https://nougat-omega.vercel.app/nougat/fitb", { text })
     ]);
 
     const docId = await saveDocument(
@@ -90,6 +91,7 @@ export default function DocumentUploader({ onDocumentCreated }) {
       text,
       tfRes.data.questions,
       mcqRes.data.questions,
+      fitbRes.data.questions,
       title
     );
 
@@ -102,7 +104,6 @@ export default function DocumentUploader({ onDocumentCreated }) {
 
   return (
     <div className="space-y-6">
-      {/* Mode Selection Buttons */}
       {!mode && (
         <div className="flex gap-4">
           <button
@@ -120,7 +121,6 @@ export default function DocumentUploader({ onDocumentCreated }) {
         </div>
       )}
 
-      {/* TEXT ENTRY */}
       {mode === "text" && (
         <>
           <textarea
@@ -151,7 +151,6 @@ export default function DocumentUploader({ onDocumentCreated }) {
         </>
       )}
 
-      {/* FILE UPLOAD */}
       {mode === "file" && (
         <>
           <div
