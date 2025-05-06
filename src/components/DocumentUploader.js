@@ -77,11 +77,14 @@ export default function DocumentUploader({onDocumentCreated}) {
 
         const title = await generateSummary();
 
-        const [tfRes, mcqRes, fitbRes] = await Promise.all([
+        const [tfRes, mcqRes, fitbRes, cardRes] = await Promise.all([
             axios.post("https://nougat-omega.vercel.app/nougat/tftext", {text}),
             axios.post("https://nougat-omega.vercel.app/nougat/mcqtext", {text}),
-            axios.post("https://nougat-omega.vercel.app/nougat/fitb", {text})
+            axios.post("https://nougat-omega.vercel.app/nougat/fitb", {text}),
+            axios.post("https://nougat-omega.vercel.app/nougat/cards", {text}) // 🔥 card generation added
         ]);
+
+        const flashcards = cardRes.data.questions || [];
 
         const docId = await saveDocument(
             currentUser.uid,
@@ -89,7 +92,8 @@ export default function DocumentUploader({onDocumentCreated}) {
             tfRes.data.questions,
             mcqRes.data.questions,
             fitbRes.data.questions,
-            title
+            title,
+            flashcards // 🔥 pass cards
         );
 
         setLoading(false);
@@ -99,6 +103,7 @@ export default function DocumentUploader({onDocumentCreated}) {
         setMode(null);
         onDocumentCreated(docId);
     };
+
 
     return (
         <div className="space-y-6">

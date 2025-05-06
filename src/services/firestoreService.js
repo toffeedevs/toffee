@@ -1,110 +1,214 @@
-import { db } from "../App";
-import {
-  collection,
-  doc,
-  addDoc,
-  getDocs,
-  getDoc,
-  updateDoc
-} from "firebase/firestore";
-import { deleteDoc } from "firebase/firestore";
+// src/services/firestoreService.js
 
+import {initializeApp} from "firebase/app";
+import {
+    addDoc,
+    collection,
+    deleteDoc,
+    doc,
+    getDoc,
+    getDocs,
+    getFirestore,
+    serverTimestamp,
+    setDoc,
+    updateDoc,
+} from "firebase/firestore";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyAL1dQyCk6bGrKyOAZStLnab9MBxIeAodI",
+    authDomain: "toffee-2bdd4.firebaseapp.com",
+    projectId: "toffee-2bdd4",
+    storageBucket: "toffee-2bdd4.firebasestorage.app",
+    messagingSenderId: "254874642056",
+    appId: "1:254874642056:web:5683acb4379b81bf22e13d",
+    measurementId: "G-F0EEBXC8M3"
+};
+
+// Initialize Firebase & Firestore
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/**
+ * Delete a document.
+ */
 export async function deleteDocument(userId, docId) {
-  const ref = doc(db, "users", userId, "documents", docId);
-  await deleteDoc(ref);
+    const ref = doc(db, "users", userId, "documents", docId);
+    await deleteDoc(ref);
 }
 
-export async function saveDocument(userId, text, tfQuestions, mcqQuestions, fitbQuestions, title = "") {
-  const ref = await addDoc(collection(db, "users", userId, "documents"), {
-    title,
+export async function saveDocument(
+    userId,
     text,
-    createdAt: new Date(),
-    questions: { tf: tfQuestions, mcq: mcqQuestions, fitb: fitbQuestions },
-    results: { tf: [], mcq: [], fitb: [] }
-  });
-  return ref.id;
+    tfQuestions,
+    mcqQuestions,
+    fitbQuestions,
+    summary = "",
+    flashcards = []
+) {
+    const ref = await addDoc(collection(db, "users", userId, "documents"), {
+        title: summary,
+        summary,
+        text,
+        createdAt: new Date(),
+        questions: {tf: tfQuestions, mcq: mcqQuestions, fitb: fitbQuestions},
+        results: {tf: [], mcq: [], fitb: []},
+        flashcards,
+    });
+    return ref.id;
 }
 
 export async function getUserDocuments(userId) {
-  const snap = await getDocs(collection(db, "users", userId, "documents"));
-  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const snap = await getDocs(collection(db, "users", userId, "documents"));
+    return snap.docs.map((doc) => ({id: doc.id, ...doc.data()}));
 }
 
 export async function getQuestionsForDocument(userId, docId, type) {
-  const ref = doc(db, "users", userId, "documents", docId);
-  const snap = await getDoc(ref);
-  return snap.exists() ? snap.data().questions[type] || [] : [];
+    const ref = doc(db, "users", userId, "documents", docId);
+    const snap = await getDoc(ref);
+    return snap.exists() ? snap.data().questions[type] || [] : [];
 }
 
 export async function recordQuizResults(userId, docId, type, results) {
-  const ref = doc(db, "users", userId, "documents", docId);
-  const snap = await getDoc(ref);
-  const prev = snap.exists() && snap.data().results?.[type] || [];
-  await updateDoc(ref, { [`results.${type}`]: [...prev, ...results] });
+    const ref = doc(db, "users", userId, "documents", docId);
+    const snap = await getDoc(ref);
+    const prev = snap.exists() && snap.data().results?.[type] || [];
+    await updateDoc(ref, {[`results.${type}`]: [...prev, ...results]});
 }
 
 export async function getUserStats(userId) {
-  const snap = await getDocs(collection(db, "users", userId, "documents"));
-  const base = { total: 0, correct: 0 };
-  const agg = { mcq: { ...base }, tf: { ...base }, fitb: { ...base } };
+    const snap = await getDocs(collection(db, "users", userId, "documents"));
+    const base = {total: 0, correct: 0};
+    const agg = {mcq: {...base}, tf: {...base}, fitb: {...base}};
 
-  snap.docs.forEach(doc => {
-    const r = doc.data().results || {};
-    for (const type of ["mcq", "tf", "fitb"]) {
-      if (r[type]) {
-        agg[type].total += r[type].length;
-        agg[type].correct += r[type].filter(res => res.correct).length;
-      }
-    }
-  });
+    snap.docs.forEach((doc) => {
+        const r = doc.data().results || {};
+        for (const type of ["mcq", "tf", "fitb"]) {
+            if (r[type]) {
+                agg[type].total += r[type].length;
+                agg[type].correct += r[type].filter((res) => res.correct).length;
+            }
+        }
+    });
 
-  const calc = type => ({
-    total: agg[type].total,
-    correct: agg[type].correct,
-    percentage: agg[type].total ? Math.round((agg[type].correct / agg[type].total) * 100) : 0
-  });
+    const calc = (type) => ({
+        total: agg[type].total,
+        correct: agg[type].correct,
+        percentage: agg[type].total
+            ? Math.round((agg[type].correct / agg[type].total) * 100)
+            : 0,
+    });
 
-  return {
-    mcq: calc("mcq"),
-    tf: calc("tf"),
-    fitb: calc("fitb")
-  };
+    return {
+        mcq: calc("mcq"),
+        tf: calc("tf"),
+        fitb: calc("fitb"),
+    };
 }
 
 export async function getUserStatsThisWeek(userId) {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekAgo = new Date(today);
-  weekAgo.setDate(weekAgo.getDate() - 6);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 6);
 
-  const snap = await getDocs(collection(db, "users", userId, "documents"));
+    const snap = await getDocs(collection(db, "users", userId, "documents"));
 
-  let docs = 0, quizzes = 0, correct = 0, total = 0;
-  const activityMap = Array(7).fill(false);
+    let docs = 0,
+        quizzes = 0,
+        correct = 0,
+        total = 0;
+    const activityMap = Array(7).fill(false);
 
-  snap.docs.forEach(doc => {
-    const data = doc.data();
-    const created = new Date(data.createdAt?.seconds * 1000);
-    const dayDiff = Math.floor((created - weekAgo) / (1000 * 60 * 60 * 24));
-    if (dayDiff >= 0 && dayDiff < 7) {
-      activityMap[dayDiff] = true;
-      docs++;
-    }
-
-    const results = data.results || {};
-    for (const type of ["mcq", "tf", "fitb"]) {
-      if (results[type]) {
-        const recent = results[type].filter(() => created >= weekAgo);
-        if (recent.length > 0 && dayDiff >= 0 && dayDiff < 7) {
-          activityMap[dayDiff] = true;
-          quizzes += 1;
+    snap.docs.forEach((doc) => {
+        const data = doc.data();
+        const created = new Date(data.createdAt?.seconds * 1000);
+        const dayDiff = Math.floor((created - weekAgo) / (1000 * 60 * 60 * 24));
+        if (dayDiff >= 0 && dayDiff < 7) {
+            activityMap[dayDiff] = true;
+            docs++;
         }
-        total += recent.length;
-        correct += recent.filter(r => r.correct).length;
-      }
-    }
-  });
 
-  const accuracy = total ? Math.round((correct / total) * 100) : 0;
-  return { docs, quizzes, accuracy, streak: activityMap };
+        const results = data.results || {};
+        for (const type of ["mcq", "tf", "fitb"]) {
+            if (results[type]) {
+                const recent = results[type].filter(() => created >= weekAgo);
+                if (recent.length > 0 && dayDiff >= 0 && dayDiff < 7) {
+                    activityMap[dayDiff] = true;
+                    quizzes += 1;
+                }
+                total += recent.length;
+                correct += recent.filter((r) => r.correct).length;
+            }
+        }
+    });
+
+    const accuracy = total ? Math.round((correct / total) * 100) : 0;
+    return {docs, quizzes, accuracy, streak: activityMap};
+}
+
+export async function getFlashcardStats(userId, docId) {
+    const statsRef = doc(
+        db,
+        "users",
+        userId,
+        "documents",
+        docId,
+        "flashcardStats",
+        "stats"
+    );
+    const snap = await getDoc(statsRef);
+    return snap.exists() ? snap.data() : {};
+}
+
+export async function updateFlashcardStat(userId, docId, cardId, stat) {
+    const cardRef = doc(
+        db,
+        "users",
+        userId,
+        "documents",
+        docId,
+        "flashcardStats",
+        cardId
+    );
+    await setDoc(cardRef, stat, {merge: true});
+}
+
+export async function addCardNote(userId, docId, cardId, noteText) {
+    const notesCol = collection(
+        db,
+        "users",
+        userId,
+        "documents",
+        docId,
+        "flashcardStats",
+        cardId,
+        "notes"
+    );
+    await addDoc(notesCol, {
+        text: noteText,
+        createdAt: serverTimestamp(),
+    });
+}
+
+export async function logFlashcardSession(userId, docId, stats) {
+    const sessionRef = collection(
+        db,
+        "users",
+        userId,
+        "documents",
+        docId,
+        "flashcardSessions"
+    );
+
+    const totalCards = Object.keys(stats).length;
+    const easyCount = Object.values(stats).filter((s) => s.easy > 0).length;
+    const hardCount = Object.values(stats).filter((s) => s.hard > 0).length;
+
+    await addDoc(sessionRef, {
+        completedAt: serverTimestamp(),
+        totalCards,
+        easyCount,
+        hardCount,
+        cardIds: Object.keys(stats),
+    });
 }
