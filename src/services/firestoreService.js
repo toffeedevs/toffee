@@ -9,11 +9,12 @@ import {
     getDoc,
     getDocs,
     getFirestore,
+    query,
     serverTimestamp,
     setDoc,
     updateDoc,
+    where,
 } from "firebase/firestore";
-import { query, where } from "firebase/firestore";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAL1dQyCk6bGrKyOAZStLnab9MBxIeAodI",
@@ -79,8 +80,12 @@ export async function recordQuizResults(userId, docId, type, results) {
 export async function getUserStats(userId) {
     const snap = await getDocs(collection(db, "users", userId, "documents"));
     const base = {total: 0, correct: 0};
-    const agg = {mcq: {...base}, tf: {...base}, fitb: {...base}};
-
+    const agg = {
+        mcq: {...base},
+        tf: {...base},
+        fitb: {...base},
+        flashcardsStudied: 0,
+    };
     snap.docs.forEach((doc) => {
         const r = doc.data().results || {};
         for (const type of ["mcq", "tf", "fitb"]) {
@@ -90,6 +95,19 @@ export async function getUserStats(userId) {
             }
         }
     });
+
+    // Count total flashcards studied from all flashcardSessions
+    for (const docSnap of snap.docs) {
+        const sessionSnap = await getDocs(collection(docSnap.ref, "flashcardSessions"));
+        sessionSnap.forEach((s) => {
+            const d = s.data();
+            if (d?.totalCards) {
+                agg.flashcardsStudied += d.totalCards;
+            } else if (d?.cardIds) {
+                agg.flashcardsStudied += d.cardIds.length;
+            }
+        });
+    }
 
     const calc = (type) => ({
         total: agg[type].total,
@@ -103,7 +121,9 @@ export async function getUserStats(userId) {
         mcq: calc("mcq"),
         tf: calc("tf"),
         fitb: calc("fitb"),
+        flashcardsStudied: agg.flashcardsStudied,
     };
+
 }
 
 export async function getUserStatsThisWeek(userId) {
@@ -215,76 +235,88 @@ export async function logFlashcardSession(userId, docId, stats) {
 }
 
 export async function shareToMarketplace(userId, document, tags = []) {
-  // Avoid duplicate shares: check for matching user + summary + text
-  const q = query(
-    collection(db, "marketplace"),
-    where("sharedBy", "==", userId),
-    where("summary", "==", document.summary),
-    where("text", "==", document.text)
-  );
-  const existing = await getDocs(q);
-  if (!existing.empty) throw new Error("Already shared");
+    const profile = await getUserProfile(userId);
+    const username = profile.username || "anonymous";
 
-  const marketplaceDoc = {
-    text: document.text,
-    summary: document.summary,
-    questions: document.questions,
-    flashcards: document.flashcards || [],
-    sharedBy: userId,
-    createdAt: new Date(),
-    tags,
-  };
+    // Avoid duplicate shares: check for matching user + summary + text
+    const q = query(
+        collection(db, "marketplace"),
+        where("sharedBy", "==", username),
+        where("summary", "==", document.summary),
+        where("text", "==", document.text)
+    );
+    const existing = await getDocs(q);
+    if (!existing.empty) throw new Error("Already shared");
 
-  await addDoc(collection(db, "marketplace"), marketplaceDoc);
+    const marketplaceDoc = {
+        text: document.text,
+        summary: document.summary,
+        questions: document.questions,
+        flashcards: document.flashcards || [],
+        sharedBy: username,
+        createdAt: new Date(),
+        tags,
+    };
+
+    await addDoc(collection(db, "marketplace"), marketplaceDoc);
 }
 
 
-
 export async function getMarketplaceDocs(tag = null) {
-  const ref = collection(db, "marketplace");
+    const ref = collection(db, "marketplace");
 
-  const q = tag
-    ? query(ref, where("tags", "array-contains", tag))
-    : ref;
+    const q = tag
+        ? query(ref, where("tags", "array-contains", tag))
+        : ref;
 
-  const snap = await getDocs(q);
-  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const snap = await getDocs(q);
+    return snap.docs.map((doc) => ({id: doc.id, ...doc.data()}));
 }
 
 
 export async function importMarketplaceDoc(currentUserId, sharedDocId) {
-  const sharedDocRef = doc(db, "marketplace", sharedDocId);
-  const snap = await getDoc(sharedDocRef);
+    const sharedDocRef = doc(db, "marketplace", sharedDocId);
+    const snap = await getDoc(sharedDocRef);
 
-  if (!snap.exists()) throw new Error("Shared document not found.");
-  const sharedData = snap.data();
+    if (!snap.exists()) throw new Error("Shared document not found.");
+    const sharedData = snap.data();
 
-  // ❌ Block only if user already imported (even if they were the sharer)
-  const q = query(
-    collection(db, "users", currentUserId, "documents"),
-    where("importedFrom", "==", sharedDocId)
-  );
-  const existing = await getDocs(q);
+    // ❌ Block only if user already imported (even if they were the sharer)
+    const q = query(
+        collection(db, "users", currentUserId, "documents"),
+        where("importedFrom", "==", sharedDocId)
+    );
+    const existing = await getDocs(q);
 
-  // ALSO check for same text/summary (in case user shared directly)
-  const q2 = query(
-    collection(db, "users", currentUserId, "documents"),
-    where("summary", "==", sharedData.summary),
-    where("text", "==", sharedData.text)
-  );
-  const duplicate = await getDocs(q2);
+    // ALSO check for same text/summary (in case user shared directly)
+    const q2 = query(
+        collection(db, "users", currentUserId, "documents"),
+        where("summary", "==", sharedData.summary),
+        where("text", "==", sharedData.text)
+    );
+    const duplicate = await getDocs(q2);
 
-  if (!existing.empty || !duplicate.empty) {
-    throw new Error("Already imported");
-  }
+    if (!existing.empty || !duplicate.empty) {
+        throw new Error("Already imported");
+    }
 
-  // ✅ Import allowed
-  await addDoc(collection(db, "users", currentUserId, "documents"), {
-    ...sharedData,
-    importedFrom: sharedDocId,
-    importedAt: new Date(),
-  });
+    // ✅ Import allowed
+    await addDoc(collection(db, "users", currentUserId, "documents"), {
+        ...sharedData,
+        importedFrom: sharedDocId,
+        importedAt: new Date(),
+    });
 }
 
+export async function getUserProfile(userId) {
+    const ref = doc(db, "users", userId, "profile", "info");
+    const snap = await getDoc(ref);
+    return snap.exists() ? snap.data() : {username: ""};
+}
+
+export async function updateUserProfile(userId, profileData) {
+    const ref = doc(db, "users", userId, "profile", "info");
+    await setDoc(ref, {...profileData, updatedAt: new Date()}, {merge: true});
+}
 
 

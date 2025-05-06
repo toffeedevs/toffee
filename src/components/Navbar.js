@@ -22,6 +22,7 @@ export default function Navbar() {
                         <Link to="/dashboard" className="hover:text-purple-300">Dashboard</Link>
                         <Link to="/marketplace" className="hover:text-purple-300">Marketplace</Link>
                         <Link to="/stats" className="hover:text-purple-300">Stats</Link>
+                        <Link to="/profile" className="hover:text-purple-300">Profile</Link>
                         <button onClick={handleLogout} className="text-red-400 hover:text-red-300">Logout</button>
                     </>
                 )}

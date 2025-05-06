@@ -1,9 +1,10 @@
 import React, {useEffect, useState} from "react";
 import {useLocation, useNavigate} from "react-router-dom";
 import {useAuth} from "../context/AuthContext";
-import {addDoc, collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc,} from "firebase/firestore";
+import {addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc,} from "firebase/firestore";
 import {db} from "../App";
 import {generateFlashcards} from "../services/flashcardService";
+import {logFlashcardSession} from "../services/firestoreService";
 
 export default function FlashcardSession() {
     const {currentUser} = useAuth();
@@ -70,10 +71,15 @@ export default function FlashcardSession() {
         if (!currentUser) return;
         (async () => {
             const qs = await generateFlashcards(text);
-            const statsRef = doc(db, "users", currentUser.uid, "documents", docId, "flashcardStats", "stats");
-            const snap = await getDoc(statsRef);
-            const statData = snap.exists() ? snap.data() : {};
-            setStats(statData);
+            const statsSnap = await getDocs(
+                collection(db, "users", currentUser.uid, "documents", docId, "flashcardStats")
+            );
+            const statData = {};
+            statsSnap.docs.forEach((d) => {
+                if (d.id !== "stats") {
+                    statData[d.id] = d.data();
+                }
+            });
             const sorted = prioritizeFlashcards(qs, statData);
             setCards(sorted.map((e) => e.card));
             setShowBack(true);
@@ -134,26 +140,19 @@ export default function FlashcardSession() {
             );
         }
 
+        const newStats = {...sessionCardStats, [key]: updated};
+        setSessionCardStats(newStats);
         setStats((prev) => ({...prev, [key]: updated}));
-        setSessionCardStats((prev) => ({...prev, [key]: updated}));
         setNoteText("");
         setShowBack(true);
 
-        setTimeout(async () => {
-            if (idx + 1 === cards.length) {
-                await addDoc(
-                    collection(db, "users", currentUser.uid, "documents", docId, "flashcardSessions"),
-                    {
-                        completedAt: serverTimestamp(),
-                        cards: sessionCardStats,
-                    }
-                );
-                setSessionComplete(true);
-            } else {
-                setIdx((i) => i + 1);
-                setShowBack(true);
-            }
-        }, 300);
+        if (idx + 1 === cards.length) {
+            await logFlashcardSession(currentUser.uid, docId, newStats);
+            setSessionComplete(true);
+        } else {
+            setIdx((i) => i + 1);
+            setShowBack(true);
+        }
     };
 
     return (
