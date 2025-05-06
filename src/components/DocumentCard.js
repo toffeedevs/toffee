@@ -7,6 +7,7 @@ export default function DocumentCard({
   onTakeTF,
   onTakeFITB,
   onReviewFlashcards,
+  onStartFeynman,
   onDeleted,
 }) {
   return (
@@ -20,40 +21,32 @@ export default function DocumentCard({
         ❌
       </button>
 
-      {/* AI-generated summary only */}
+      {/* Summary */}
       <h3 className="text-lg font-semibold text-white mb-6">
         {doc.summary || "No summary available"}
       </h3>
 
-      {/* Action buttons with emojis */}
+      {/* Action buttons */}
       <div className="mt-auto flex flex-wrap gap-2">
-        <button
-          onClick={onTakeMCQ}
-          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center space-x-2"
-        >
+        <button onClick={onTakeMCQ} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center space-x-2">
           <span>📝</span>
           <span>MCQ</span>
         </button>
-        <button
-          onClick={onTakeTF}
-          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center space-x-2"
-        >
+        <button onClick={onTakeTF} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center space-x-2">
           <span>✅</span>
           <span>True/False</span>
         </button>
-        <button
-          onClick={onTakeFITB}
-          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center space-x-2"
-        >
+        <button onClick={onTakeFITB} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center space-x-2">
           <span>✍️</span>
           <span>Fill-in-the-Blank</span>
         </button>
-        <button
-          onClick={onReviewFlashcards}
-          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center space-x-2"
-        >
+        <button onClick={onReviewFlashcards} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center space-x-2">
           <span>🃏</span>
           <span>Flashcards</span>
+        </button>
+        <button onClick={onStartFeynman} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center space-x-2">
+          <span>🧠</span>
+          <span>Feynman</span>
         </button>
       </div>
     </div>
