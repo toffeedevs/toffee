@@ -3,8 +3,9 @@ import React, {useEffect, useState} from "react";
 import {useAuth} from "../context/AuthContext";
 import DocumentUploader from "../components/DocumentUploader";
 import DocumentCard from "../components/DocumentCard";
-import {deleteDocument, getUserDocuments} from "../services/firestoreService";
+import {deleteDocument, getUserDocuments, shareToMarketplace} from "../services/firestoreService";
 import {useNavigate} from "react-router-dom";
+
 
 export default function Dashboard() {
     const {currentUser} = useAuth();
@@ -52,6 +53,26 @@ export default function Dashboard() {
                             navigate("/feynman", {state: {docId: doc.id, text: doc.text}})
                         }
                         onDeleted={() => handleDelete(doc.id)}
+                        onShare={async () => {
+                            try {
+                                const tagInput = prompt("Enter comma-separated tags (e.g., biology, enzymes)");
+                                if (tagInput === null) return;
+                                const tags = tagInput
+                                    .split(",")
+                                    .map((t) => t.trim().toLowerCase())
+                                    .filter((t) => t.length > 0);
+
+                                await shareToMarketplace(currentUser.uid, doc, tags);
+                                alert("📤 Shared to marketplace!");
+                            } catch (err) {
+                                console.error("Share error:", err);
+                                if (err.message.includes("Already shared")) {
+                                    alert("⚠️ You’ve already shared this document.");
+                                } else {
+                                    alert("Failed to share document.");
+                                }
+                            }
+                        }}
                     />
                 ))}
             </div>

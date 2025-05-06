@@ -20,7 +20,7 @@ import Stats from "./components/Stats";
 
 import "./index.css";
 import FeynmanSession from "./components/FeynmanSession";
-
+import Marketplace from "./pages/Marketplace";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAL1dQyCk6bGrKyOAZStLnab9MBxIeAodI",
@@ -95,6 +95,11 @@ export default function App() {
                         path="/stats"
                         element={user ? <Stats/> : <Navigate to="/login"/>}
                     />
+                    <Route
+                        path="/marketplace"
+                        element={user ? <Marketplace/> : <Navigate to="/login"/>}
+                    />
+
                 </Routes>
             </Router>
         </AuthProvider>

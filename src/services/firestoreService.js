@@ -13,6 +13,7 @@ import {
     setDoc,
     updateDoc,
 } from "firebase/firestore";
+import { query, where } from "firebase/firestore";
 
 const firebaseConfig = {
     apiKey: "AIzaSyAL1dQyCk6bGrKyOAZStLnab9MBxIeAodI",
@@ -212,3 +213,78 @@ export async function logFlashcardSession(userId, docId, stats) {
         cardIds: Object.keys(stats),
     });
 }
+
+export async function shareToMarketplace(userId, document, tags = []) {
+  // Avoid duplicate shares: check for matching user + summary + text
+  const q = query(
+    collection(db, "marketplace"),
+    where("sharedBy", "==", userId),
+    where("summary", "==", document.summary),
+    where("text", "==", document.text)
+  );
+  const existing = await getDocs(q);
+  if (!existing.empty) throw new Error("Already shared");
+
+  const marketplaceDoc = {
+    text: document.text,
+    summary: document.summary,
+    questions: document.questions,
+    flashcards: document.flashcards || [],
+    sharedBy: userId,
+    createdAt: new Date(),
+    tags,
+  };
+
+  await addDoc(collection(db, "marketplace"), marketplaceDoc);
+}
+
+
+
+export async function getMarketplaceDocs(tag = null) {
+  const ref = collection(db, "marketplace");
+
+  const q = tag
+    ? query(ref, where("tags", "array-contains", tag))
+    : ref;
+
+  const snap = await getDocs(q);
+  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+}
+
+
+export async function importMarketplaceDoc(currentUserId, sharedDocId) {
+  const sharedDocRef = doc(db, "marketplace", sharedDocId);
+  const snap = await getDoc(sharedDocRef);
+
+  if (!snap.exists()) throw new Error("Shared document not found.");
+  const sharedData = snap.data();
+
+  // ❌ Block only if user already imported (even if they were the sharer)
+  const q = query(
+    collection(db, "users", currentUserId, "documents"),
+    where("importedFrom", "==", sharedDocId)
+  );
+  const existing = await getDocs(q);
+
+  // ALSO check for same text/summary (in case user shared directly)
+  const q2 = query(
+    collection(db, "users", currentUserId, "documents"),
+    where("summary", "==", sharedData.summary),
+    where("text", "==", sharedData.text)
+  );
+  const duplicate = await getDocs(q2);
+
+  if (!existing.empty || !duplicate.empty) {
+    throw new Error("Already imported");
+  }
+
+  // ✅ Import allowed
+  await addDoc(collection(db, "users", currentUserId, "documents"), {
+    ...sharedData,
+    importedFrom: sharedDocId,
+    importedAt: new Date(),
+  });
+}
+
+
+
