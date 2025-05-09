@@ -14,6 +14,7 @@ import {
     setDoc,
     updateDoc,
     where,
+    increment
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -320,3 +321,11 @@ export async function updateUserProfile(userId, profileData) {
 }
 
 
+export async function incrementQuizCount(userId, type, correct, total) {
+  const ref = doc(db, "users", userId, "profile", "info");
+  await setDoc(ref, {
+    [`${type}_quizzes_taken`]: increment(1),
+    [`${type}_correct`]: increment(correct),
+    [`${type}_total`]: increment(total)
+  }, { merge: true });
+}

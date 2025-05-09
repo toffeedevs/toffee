@@ -1,10 +1,10 @@
 import React, {useEffect, useState} from "react";
 import {useLocation, useNavigate} from "react-router-dom";
 import {useAuth} from "../context/AuthContext";
-import {getQuestionsForDocument, recordQuizResults} from "../services/firestoreService";
+import {getQuestionsForDocument, incrementQuizCount} from "../services/firestoreService";
 
 export default function QuizTaker() {
-    const {state} = useLocation(); // { docId, type }
+    const {state} = useLocation(); // { docId, type, questions }
     const {currentUser} = useAuth();
     const navigate = useNavigate();
     const [questions, setQuestions] = useState([]);
@@ -12,24 +12,26 @@ export default function QuizTaker() {
 
     useEffect(() => {
         async function fetch() {
-            const q = await getQuestionsForDocument(currentUser.uid, state.docId, state.type);
-            setQuestions(q);
+            if (state.questions) {
+                setQuestions(state.questions);
+            } else if (state.docId && currentUser) {
+                const q = await getQuestionsForDocument(currentUser.uid, state.docId, state.type);
+                setQuestions(q);
+            }
         }
 
         fetch();
-    }, [state.docId, state.type, currentUser.uid]);
+    }, [state, currentUser]);
 
     const handleSubmit = async () => {
         const results = questions.map((q, i) => {
-            const userAnswer = answers[i] ?? ""; // fallback to empty string if undefined
+            const userAnswer = answers[i] ?? "";
             const correctAnswer = q.answer ?? "";
 
             let isCorrect;
 
             if (state.type === "fitb") {
-                isCorrect =
-                    String(userAnswer).trim().toLowerCase() ===
-                    String(correctAnswer).trim().toLowerCase();
+                isCorrect = String(userAnswer).trim().toLowerCase() === String(correctAnswer).trim().toLowerCase();
             } else {
                 isCorrect = userAnswer === q.answer;
             }
@@ -40,7 +42,11 @@ export default function QuizTaker() {
             };
         });
 
-        await recordQuizResults(currentUser.uid, state.docId, state.type, results);
+        const correctCount = results.filter(r => r.correct).length;
+        const totalCount = results.length;
+
+        // ✅ Update only global stats, not per-document
+        await incrementQuizCount(currentUser.uid, state.type, correctCount, totalCount);
 
         navigate("/results", {
             state: {
@@ -50,7 +56,6 @@ export default function QuizTaker() {
             }
         });
     };
-
 
     return (
         <div className="text-white p-6 min-h-screen bg-gradient-to-b from-black to-gray-900">

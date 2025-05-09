@@ -2,8 +2,6 @@
 import React, {useEffect, useState} from "react";
 import {useAuth} from "../context/AuthContext";
 import {getUserProfile, getUserStats, getUserStatsThisWeek, updateUserProfile,} from "../services/firestoreService";
-import StreakTracker from "../components/StreakTracker";
-import WeeklyProgressBox from "../components/WeeklyProgressBox";
 
 export default function Profile() {
     const {currentUser} = useAuth();
@@ -74,21 +72,6 @@ export default function Profile() {
                     </div>
                 )}
             </div>
-
-            {/* Lifetime Stats */}
-            {stats && (
-                <div className="mb-8">
-                    <h2 className="text-xl font-semibold mb-3">📊 Lifetime Stats</h2>
-                    <ul className="text-sm space-y-2">
-                        <li>MCQ Quizzes: {stats.mcq.total} (✅ {stats.mcq.correct})</li>
-                        <li>TF Quizzes: {stats.tf.total} (✅ {stats.tf.correct})</li>
-                        <li>FITB Quizzes: {stats.fitb.total} (✅ {stats.fitb.correct})</li>
-                        <li>
-                            Flashcards Studied: {stats.flashcardsStudied}
-                        </li>
-                    </ul>
-                </div>
-            )}
         </div>
     );
 }

@@ -1,16 +1,17 @@
-// src/components/DocumentCard.js
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function DocumentCard({
   doc,
-  onTakeMCQ,
   onTakeTF,
   onTakeFITB,
   onReviewFlashcards,
   onStartFeynman,
   onDeleted,
-  onShare, // 🆕 added
+  onShare,
 }) {
+  const navigate = useNavigate();
+
   return (
     <div className="relative bg-gray-800/60 border border-purple-700 rounded-2xl p-6 flex flex-col shadow-md backdrop-blur-sm">
       <button
@@ -26,7 +27,10 @@ export default function DocumentCard({
       </h3>
 
       <div className="mt-auto flex flex-wrap gap-2">
-        <button onClick={onTakeMCQ} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
+        <button
+          onClick={() => navigate("/generate/mcq", { state: { docId: doc.id, docText: doc.text } })}
+          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition"
+        >
           📝 MCQ
         </button>
         <button onClick={onTakeTF} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">

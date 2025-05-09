@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import logo from "../assets/toffee-logo.png";
 import { useAuth } from "../context/AuthContext";
 import { getUserStatsThisWeek } from "../services/firestoreService";
-import StreakTracker from "../components/StreakTracker";
 
 export default function Home() {
   const { currentUser } = useAuth();
@@ -63,8 +62,6 @@ export default function Home() {
           </ul>
 
           {/* Streak tracker */}
-          <StreakTracker streakData={weeklyStats.streak} />
-
           {/* Weekly activity circles */}
           <div className="mt-6">
             <h3 className="text-lg font-semibold text-purple-300 mb-2">🔥 Weekly Activity</h3>
