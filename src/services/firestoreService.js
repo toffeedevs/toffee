@@ -9,12 +9,12 @@ import {
     getDoc,
     getDocs,
     getFirestore,
+    increment,
     query,
     serverTimestamp,
     setDoc,
     updateDoc,
-    where,
-    increment
+    where
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -39,26 +39,16 @@ export async function deleteDocument(userId, docId) {
     await deleteDoc(ref);
 }
 
-export async function saveDocument(
-    userId,
-    text,
-    tfQuestions,
-    mcqQuestions,
-    fitbQuestions,
-    summary = "",
-    flashcards = []
-) {
+export async function saveDocument(userId, text, summary = "") {
     const ref = await addDoc(collection(db, "users", userId, "documents"), {
         title: summary,
         summary,
         text,
-        createdAt: new Date(),
-        questions: {tf: tfQuestions, mcq: mcqQuestions, fitb: fitbQuestions},
-        results: {tf: [], mcq: [], fitb: []},
-        flashcards,
+        createdAt: new Date()
     });
     return ref.id;
 }
+
 
 export async function getUserDocuments(userId) {
     const snap = await getDocs(collection(db, "users", userId, "documents"));
@@ -322,10 +312,10 @@ export async function updateUserProfile(userId, profileData) {
 
 
 export async function incrementQuizCount(userId, type, correct, total) {
-  const ref = doc(db, "users", userId, "profile", "info");
-  await setDoc(ref, {
-    [`${type}_quizzes_taken`]: increment(1),
-    [`${type}_correct`]: increment(correct),
-    [`${type}_total`]: increment(total)
-  }, { merge: true });
+    const ref = doc(db, "users", userId, "profile", "info");
+    await setDoc(ref, {
+        [`${type}_quizzes_taken`]: increment(1),
+        [`${type}_correct`]: increment(correct),
+        [`${type}_total`]: increment(total)
+    }, {merge: true});
 }

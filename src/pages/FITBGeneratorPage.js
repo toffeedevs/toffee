@@ -2,7 +2,7 @@ import React, {useState} from "react";
 import {useLocation, useNavigate} from "react-router-dom";
 import axios from "axios";
 
-export default function MCQGeneratorPage() {
+export default function FITBGeneratorPage() {
     const {state} = useLocation(); // { docId, docText }
     const navigate = useNavigate();
     const [focusAreas, setFocusAreas] = useState("");
@@ -12,14 +12,12 @@ export default function MCQGeneratorPage() {
 
     const handleGenerate = async () => {
         setLoading(true);
-        console.log(state.docText);
-
         try {
             // Ensure docText is a string, clean problematic characters, and flatten to paragraph
             const safeDocText = String(state.docText)
                 .replace(/\u0000/g, "")            // remove null characters
                 .replace(/[\u0001-\u001F\u007F]/g, " ") // replace control characters with space
-                .replace(/\s+/g, " ")              // collapse all whitespace/newlines to single space
+                .replace(/\s+/g, " ")              // collapse multiple spaces/newlines to single space
                 .trim();                           // remove leading/trailing spaces
 
             const payload = {
@@ -31,18 +29,18 @@ export default function MCQGeneratorPage() {
                 difficulty
             };
 
-            const res = await axios.post("https://nougat-omega.vercel.app/nougat/mcqtext", payload, {
+            const res = await axios.post("https://nougat-omega.vercel.app/nougat/fitb", payload, {
                 headers: {"Content-Type": "application/json"}
             });
 
-            navigate("/quiz/mcq", {
+            navigate("/quiz/fitb", {
                 state: {
-                    type: "mcq",
+                    type: "fitb",
                     questions: res.data.questions
                 }
             });
         } catch (err) {
-            alert("Failed to generate MCQs.");
+            alert("Failed to generate Fill-in-the-Blank questions.");
             console.error(err);
         } finally {
             setLoading(false);
@@ -53,7 +51,7 @@ export default function MCQGeneratorPage() {
         <div
             className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex items-center justify-center px-4">
             <div className="bg-gray-900 p-8 rounded-xl w-full max-w-md">
-                <h1 className="text-2xl font-bold text-purple-400 mb-4">Configure MCQ Generation</h1>
+                <h1 className="text-2xl font-bold text-purple-400 mb-4">Configure Fill-in-the-Blank Generation</h1>
                 <div className="mb-3">
                     <label className="block text-sm mb-1">Areas of Focus (comma-separated)</label>
                     <input
@@ -95,7 +93,7 @@ export default function MCQGeneratorPage() {
                         disabled={loading}
                         className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded"
                     >
-                        {loading ? "Generating..." : "Generate MCQs"}
+                        {loading ? "Generating..." : "Generate FITB"}
                     </button>
                 </div>
             </div>

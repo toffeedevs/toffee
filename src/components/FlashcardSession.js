@@ -1,16 +1,15 @@
 import React, {useEffect, useState} from "react";
 import {useLocation, useNavigate} from "react-router-dom";
 import {useAuth} from "../context/AuthContext";
-import {addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc,} from "firebase/firestore";
+import {addDoc, collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc} from "firebase/firestore";
 import {db} from "../App";
-import {generateFlashcards} from "../services/flashcardService";
 import {logFlashcardSession} from "../services/firestoreService";
 
 export default function FlashcardSession() {
     const {currentUser} = useAuth();
     const navigate = useNavigate();
     const {state} = useLocation();
-    const {docId, text} = state;
+    const {docId, text, flashcards} = state;
 
     const [cards, setCards] = useState([]);
     const [stats, setStats] = useState({});
@@ -29,17 +28,6 @@ export default function FlashcardSession() {
                 return {card, index: i, score: struggleRatio};
             })
             .sort((a, b) => b.score - a.score);
-    }
-
-    function getDifficultyLabel(stat) {
-        const views = stat.views || 0;
-        const hard = stat.hard || 0;
-        const easy = stat.easy || 0;
-        if (views === 0) return "🆕 New";
-        const ratio = (hard + 1) / (views + 2);
-        if (ratio >= 0.6) return "🔥 Needs Work";
-        if (ratio <= 0.3 && easy >= hard) return "✅ Mastered";
-        return "🧠 In Progress";
     }
 
     async function resetCard(uid, docId, cardIndex) {
@@ -69,25 +57,34 @@ export default function FlashcardSession() {
 
     useEffect(() => {
         if (!currentUser) return;
+
         (async () => {
-            const qs = await generateFlashcards(text);
-            const statsSnap = await getDocs(
-                collection(db, "users", currentUser.uid, "documents", docId, "flashcardStats")
-            );
-            const statData = {};
-            statsSnap.docs.forEach((d) => {
-                if (d.id !== "stats") {
-                    statData[d.id] = d.data();
-                }
-            });
-            const sorted = prioritizeFlashcards(qs, statData);
-            setCards(sorted.map((e) => e.card));
-            setShowBack(true);
+            try {
+                const qs = flashcards;
+
+                const statsSnap = await getDocs(
+                    collection(db, "users", currentUser.uid, "documents", docId, "flashcardStats")
+                );
+
+                const statData = {};
+                statsSnap.docs.forEach((d) => {
+                    if (d.id !== "stats") {
+                        statData[d.id] = d.data();
+                    }
+                });
+
+                const sorted = prioritizeFlashcards(qs, statData);
+                setCards(sorted.map((e) => e.card));
+                setShowBack(true);
+            } catch (error) {
+                console.error("Failed to load flashcards:", error);
+            }
         })();
-    }, [currentUser, docId, text]);
+    }, [currentUser, docId, flashcards]);
 
     useEffect(() => {
         if (!currentUser || !cards.length) return;
+
         const fetchNotes = async () => {
             const ref = collection(
                 db,
@@ -102,6 +99,7 @@ export default function FlashcardSession() {
             const snap = await getDocs(ref);
             setCardNotes(snap.docs.map((doc) => ({id: doc.id, ...doc.data()})));
         };
+
         fetchNotes();
     }, [idx, currentUser, docId, cards]);
 
@@ -168,7 +166,7 @@ export default function FlashcardSession() {
                 <>
                     <div
                         className="mb-3 px-4 py-1 rounded-full bg-gray-800 border border-purple-700 text-purple-300 text-sm font-semibold">
-                        {getDifficultyLabel(cardStat)}
+                        Card {idx + 1} of {cards.length}
                     </div>
 
                     <div className="w-96 h-64 md:w-[600px] md:h-[360px] mb-6" style={{perspective: "1000px"}}>
@@ -275,8 +273,7 @@ export default function FlashcardSession() {
                     )}
 
                     <div className="text-gray-300 mt-4">
-                        Card {idx + 1}/{cards.length} &nbsp;|&nbsp; Views: {cardStat.views} &nbsp;|&nbsp; Easy:{" "}
-                        {cardStat.easy} &nbsp;|&nbsp; Hard: {cardStat.hard}
+                        Views: {cardStat.views} &nbsp;|&nbsp; Easy: {cardStat.easy} &nbsp;|&nbsp; Hard: {cardStat.hard}
                     </div>
                 </>
             ) : (
