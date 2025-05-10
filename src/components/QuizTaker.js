@@ -45,7 +45,6 @@ export default function QuizTaker() {
         const correctCount = results.filter(r => r.correct).length;
         const totalCount = results.length;
 
-        // ✅ Update only global stats, not per-document
         await incrementQuizCount(currentUser.uid, state.type, correctCount, totalCount);
 
         navigate("/results", {

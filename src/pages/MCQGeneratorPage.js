@@ -1,9 +1,9 @@
-import React, { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, {useState} from "react";
+import {useLocation, useNavigate} from "react-router-dom";
 import axios from "axios";
 
 export default function MCQGeneratorPage() {
-    const { state } = useLocation(); // { docId, docText }
+    const {state} = useLocation(); // { docId, docText }
     const navigate = useNavigate();
     const [focusAreas, setFocusAreas] = useState("");
     const [difficulty, setDifficulty] = useState("Easy");
@@ -21,13 +21,10 @@ export default function MCQGeneratorPage() {
                     messages: [
                         {
                             role: "user",
-                            content: `Please clean this text for JSON safety:
-- Remove any invalid characters or broken control symbols.
-- Flatten excessive whitespace and line breaks.
-- Ensure it's safe to embed in a JSON payload.
+                            content: `Please clean this text for JSON safety. Transcribe into a clean normal text paragraph.
 
-TEXT:
-${state.docText}`
+                                        TEXT:
+                                        ${state.docText}`
                         }
                     ]
                 },
@@ -39,8 +36,9 @@ ${state.docText}`
                 }
             );
 
-            const cleanedText = cleanRes.data.choices[0].message.content.trim();
-            console.log(cleanedText)
+            let cleanedText = cleanRes.data.choices[0].message.content.trim();
+            console.log(JSON.stringify(cleanedText))
+            cleanedText = JSON.stringify(cleanedText)
             const payload = {
                 source_document: cleanedText,
                 focus_areas: focusAreas.split(",").map((s) => s.trim()),
@@ -62,7 +60,7 @@ ${state.docText}`
 
             // 📝 Step 2: Generate MCQs
             const res = await axios.post("https://nougat-omega.vercel.app/nougat/mcqtext", payload, {
-                headers: { "Content-Type": "application/json" },
+                headers: {"Content-Type": "application/json"},
             });
 
             navigate("/quiz/mcq", {
@@ -80,7 +78,8 @@ ${state.docText}`
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex items-center justify-center px-4">
+        <div
+            className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex items-center justify-center px-4">
             <div className="bg-gray-900 p-8 rounded-xl w-full max-w-md">
                 <h1 className="text-2xl font-bold text-purple-400 mb-4">Configure MCQ Generation</h1>
                 <div className="mb-3">

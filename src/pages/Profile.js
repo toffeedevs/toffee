@@ -1,33 +1,17 @@
 // src/pages/Profile.js
 import React, {useEffect, useState} from "react";
 import {useAuth} from "../context/AuthContext";
-import {getUserProfile, getUserStats, getUserStatsThisWeek, updateUserProfile,} from "../services/firestoreService";
+import {getUserProfile, updateUserProfile,} from "../services/firestoreService";
 
 export default function Profile() {
     const {currentUser} = useAuth();
     const [username, setUsername] = useState("");
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [stats, setStats] = useState(null);
-    const [weekStats, setWeekStats] = useState(null);
-
-    useEffect(() => {
-        if (currentUser) {
-            loadProfile();
-            loadStats();
-        }
-    }, [currentUser]);
 
     const loadProfile = async () => {
         const profile = await getUserProfile(currentUser.uid);
         setUsername(profile.username || "");
-    };
-
-    const loadStats = async () => {
-        const quizStats = await getUserStats(currentUser.uid);
-        const weeklyStats = await getUserStatsThisWeek(currentUser.uid);
-        setStats(quizStats);
-        setWeekStats(weeklyStats);
     };
 
     const handleSaveUsername = async () => {
