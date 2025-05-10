@@ -233,8 +233,7 @@ export async function shareToMarketplace(userId, document, tags = []) {
     const q = query(
         collection(db, "marketplace"),
         where("sharedBy", "==", username),
-        where("summary", "==", document.summary),
-        where("text", "==", document.text)
+        where("summary", "==", document.summary)
     );
     const existing = await getDocs(q);
     if (!existing.empty) throw new Error("Already shared");
@@ -242,7 +241,7 @@ export async function shareToMarketplace(userId, document, tags = []) {
     const marketplaceDoc = {
         text: document.text,
         summary: document.summary,
-        questions: document.questions,
+        questions: document.questions || [],  // ✅ FIX: replace undefined with []
         flashcards: document.flashcards || [],
         sharedBy: username,
         createdAt: new Date(),
