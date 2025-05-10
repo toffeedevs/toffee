@@ -1,45 +1,63 @@
-import React, {useState} from "react";
-import {useLocation, useNavigate} from "react-router-dom";
+import React, { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 export default function MCQGeneratorPage() {
-    const {state} = useLocation(); // { docId, docText }
+    const { state } = useLocation(); // { docId, docText }
     const navigate = useNavigate();
     const [focusAreas, setFocusAreas] = useState("");
     const [difficulty, setDifficulty] = useState("Easy");
     const [sampleQuestions, setSampleQuestions] = useState("");
     const [loading, setLoading] = useState(false);
 
+    // Utility function to clean text for JSON-safe use
+    const cleanForJSON = (input) => {
+        if (input === undefined || input === null) {
+            return "";
+        }
+        if (typeof input !== "string") {
+            input = String(input);
+        }
+        return input
+            .replace(/\u0000/g, "")                         // remove null characters
+            .replace(/[\u0001-\u001F\u007F]/g, " ")        // replace other control chars with space
+            .replace(/\s+/g, " ")                          // collapse all whitespace/newlines to single space
+            .trim();                                       // remove leading/trailing spaces
+    };
+
     const handleGenerate = async () => {
         setLoading(true);
-        console.log(state.docText);
-
         try {
-            // Ensure docText is a string, clean problematic characters, and flatten to paragraph
-            const safeDocText = String(state.docText)
-                .replace(/\u0000/g, "")            // remove null characters
-                .replace(/[\u0001-\u001F\u007F]/g, " ") // replace control characters with space
-                .replace(/\s+/g, " ")              // collapse all whitespace/newlines to single space
-                .trim();                           // remove leading/trailing spaces
+            const safeDocText = cleanForJSON(state.docText);
 
             const payload = {
                 source_document: safeDocText,
-                focus_areas: focusAreas.split(",").map(s => s.trim()),
+                focus_areas: focusAreas.split(",").map((s) => s.trim()),
                 sample_questions: sampleQuestions
-                    ? sampleQuestions.split(";").map(s => s.trim())
+                    ? sampleQuestions.split(";").map((s) => s.trim())
                     : [],
-                difficulty
+                difficulty,
             };
 
+            // Validate JSON safety
+            try {
+                JSON.stringify(payload);
+            } catch (err) {
+                console.error("Payload contains invalid JSON:", err);
+                alert("Input contains invalid characters. Please clean your text and try again.");
+                setLoading(false);
+                return;
+            }
+
             const res = await axios.post("https://nougat-omega.vercel.app/nougat/mcqtext", payload, {
-                headers: {"Content-Type": "application/json"}
+                headers: { "Content-Type": "application/json" },
             });
 
             navigate("/quiz/mcq", {
                 state: {
                     type: "mcq",
-                    questions: res.data.questions
-                }
+                    questions: res.data.questions,
+                },
             });
         } catch (err) {
             alert("Failed to generate MCQs.");
@@ -50,8 +68,7 @@ export default function MCQGeneratorPage() {
     };
 
     return (
-        <div
-            className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex items-center justify-center px-4">
+        <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex items-center justify-center px-4">
             <div className="bg-gray-900 p-8 rounded-xl w-full max-w-md">
                 <h1 className="text-2xl font-bold text-purple-400 mb-4">Configure MCQ Generation</h1>
                 <div className="mb-3">
@@ -84,10 +101,7 @@ export default function MCQGeneratorPage() {
                     />
                 </div>
                 <div className="flex justify-between gap-3">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="px-4 py-2 bg-gray-700 rounded"
-                    >
+                    <button onClick={() => navigate(-1)} className="px-4 py-2 bg-gray-700 rounded">
                         ← Back
                     </button>
                     <button
