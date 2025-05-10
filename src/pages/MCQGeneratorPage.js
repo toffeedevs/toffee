@@ -10,28 +10,39 @@ export default function MCQGeneratorPage() {
     const [sampleQuestions, setSampleQuestions] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // Utility function to clean text for JSON-safe use
-    const cleanForJSON = (input) => {
-        if (input === undefined || input === null) {
-            return "";
-        }
-        if (typeof input !== "string") {
-            input = String(input);
-        }
-        return input
-            .replace(/\u0000/g, "")                         // remove null characters
-            .replace(/[\u0001-\u001F\u007F]/g, " ")        // replace other control chars with space
-            .replace(/\s+/g, " ")                          // collapse all whitespace/newlines to single space
-            .trim();                                       // remove leading/trailing spaces
-    };
-
     const handleGenerate = async () => {
         setLoading(true);
         try {
-            const safeDocText = cleanForJSON(state.docText);
+            // 🧹 Step 1: Clean the text using OpenRouter LLM
+            const cleanRes = await axios.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                {
+                    model: "google/gemini-2.0-flash-lite-001",
+                    messages: [
+                        {
+                            role: "user",
+                            content: `Please clean this text for JSON safety:
+- Remove any invalid characters or broken control symbols.
+- Flatten excessive whitespace and line breaks.
+- Ensure it's safe to embed in a JSON payload.
 
+TEXT:
+${state.docText}`
+                        }
+                    ]
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${process.env.REACT_APP_OPENROUTER_API_KEY}`,
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
+
+            const cleanedText = cleanRes.data.choices[0].message.content.trim();
+            console.log(cleanedText)
             const payload = {
-                source_document: safeDocText,
+                source_document: cleanedText,
                 focus_areas: focusAreas.split(",").map((s) => s.trim()),
                 sample_questions: sampleQuestions
                     ? sampleQuestions.split(";").map((s) => s.trim())
@@ -39,7 +50,7 @@ export default function MCQGeneratorPage() {
                 difficulty,
             };
 
-            // Validate JSON safety
+            // ✅ Optional: Validate JSON safety
             try {
                 JSON.stringify(payload);
             } catch (err) {
@@ -49,6 +60,7 @@ export default function MCQGeneratorPage() {
                 return;
             }
 
+            // 📝 Step 2: Generate MCQs
             const res = await axios.post("https://nougat-omega.vercel.app/nougat/mcqtext", payload, {
                 headers: { "Content-Type": "application/json" },
             });

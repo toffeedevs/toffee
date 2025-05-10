@@ -229,19 +229,20 @@ export async function shareToMarketplace(userId, document, tags = []) {
     const profile = await getUserProfile(userId);
     const username = profile.username || "anonymous";
 
-    // Avoid duplicate shares: check for matching user + summary + text
+    // Check if this document ID has already been shared
     const q = query(
         collection(db, "marketplace"),
         where("sharedBy", "==", username),
-        where("summary", "==", document.summary)
+        where("originalDocId", "==", document.id) // 🔑 compare by document ID
     );
     const existing = await getDocs(q);
     if (!existing.empty) throw new Error("Already shared");
 
     const marketplaceDoc = {
+        originalDocId: document.id,               // ✅ store the originating doc ID
         text: document.text,
         summary: document.summary,
-        questions: document.questions || [],  // ✅ FIX: replace undefined with []
+        questions: document.questions || [],
         flashcards: document.flashcards || [],
         sharedBy: username,
         createdAt: new Date(),

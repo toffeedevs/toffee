@@ -1,9 +1,9 @@
-import React, {useState} from "react";
-import {useLocation, useNavigate} from "react-router-dom";
+import React, { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 export default function FITBGeneratorPage() {
-    const {state} = useLocation(); // { docId, docText }
+    const { state } = useLocation(); // { docId, docText }
     const navigate = useNavigate();
     const [focusAreas, setFocusAreas] = useState("");
     const [difficulty, setDifficulty] = useState("Easy");
@@ -13,31 +13,63 @@ export default function FITBGeneratorPage() {
     const handleGenerate = async () => {
         setLoading(true);
         try {
-            // Ensure docText is a string, clean problematic characters, and flatten to paragraph
-            const safeDocText = String(state.docText)
-                .replace(/\u0000/g, "")            // remove null characters
-                .replace(/[\u0001-\u001F\u007F]/g, " ") // replace control characters with space
-                .replace(/\s+/g, " ")              // collapse multiple spaces/newlines to single space
-                .trim();                           // remove leading/trailing spaces
+            // 🧹 Step 1: Clean the text using OpenRouter LLM
+            const cleanRes = await axios.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                {
+                    model: "google/gemini-2.0-flash-lite-001",
+                    messages: [
+                        {
+                            role: "user",
+                            content: `Please clean this text for JSON safety:
+- Remove any invalid characters or broken control symbols.
+- Flatten excessive whitespace and line breaks.
+- Ensure it's safe to embed in a JSON payload.
+
+TEXT:
+${state.docText}`
+                        }
+                    ]
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${process.env.REACT_APP_OPENROUTER_API_KEY}`,
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
+
+            const cleanedText = cleanRes.data.choices[0].message.content.trim();
 
             const payload = {
-                source_document: safeDocText,
-                focus_areas: focusAreas.split(",").map(s => s.trim()),
+                source_document: cleanedText,
+                focus_areas: focusAreas.split(",").map((s) => s.trim()),
                 sample_questions: sampleQuestions
-                    ? sampleQuestions.split(";").map(s => s.trim())
+                    ? sampleQuestions.split(";").map((s) => s.trim())
                     : [],
-                difficulty
+                difficulty,
             };
 
+            // ✅ Optional: Validate JSON safety
+            try {
+                JSON.stringify(payload);
+            } catch (err) {
+                console.error("Payload contains invalid JSON:", err);
+                alert("Input contains invalid characters. Please clean your text and try again.");
+                setLoading(false);
+                return;
+            }
+
+            // 📝 Step 2: Generate FITB questions
             const res = await axios.post("https://nougat-omega.vercel.app/nougat/fitb", payload, {
-                headers: {"Content-Type": "application/json"}
+                headers: { "Content-Type": "application/json" },
             });
 
             navigate("/quiz/fitb", {
                 state: {
                     type: "fitb",
-                    questions: res.data.questions
-                }
+                    questions: res.data.questions,
+                },
             });
         } catch (err) {
             alert("Failed to generate Fill-in-the-Blank questions.");
@@ -48,8 +80,7 @@ export default function FITBGeneratorPage() {
     };
 
     return (
-        <div
-            className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex items-center justify-center px-4">
+        <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex items-center justify-center px-4">
             <div className="bg-gray-900 p-8 rounded-xl w-full max-w-md">
                 <h1 className="text-2xl font-bold text-purple-400 mb-4">Configure Fill-in-the-Blank Generation</h1>
                 <div className="mb-3">
