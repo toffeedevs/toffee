@@ -30,7 +30,25 @@ a:focus {
   @apply ring-2 ring-offset-2 ring-indigo-500;
 }
 
+/* PDF text layer highlight support */
+.textLayer {
+  color: transparent;
+  user-select: text;
+  -webkit-user-select: text;
+  pointer-events: auto;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.textLayer span.highlighted {
+  background-color: rgba(255, 255, 0, 0.4);
+  transition: background-color 0.3s ease;
+}
+
+
 .react-calendar-heatmap .color-empty     { fill: #1f2937; }
 .react-calendar-heatmap .color-scale-1  { fill: #4b5563; }
 .react-calendar-heatmap .color-scale-2  { fill: #818cf8; }
 .react-calendar-heatmap .color-scale-3  { fill: #6366f1; }
+

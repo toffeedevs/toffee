@@ -22,6 +22,7 @@ import Profile from "./pages/Profile";
 import MCQGeneratorPage from "./pages/MCQGeneratorPage";
 import FITBGeneratorPage from "./pages/FITBGeneratorPage";
 import FlashcardGeneratorPage from "./pages/FlashcardGeneratorPage";
+import FlashPartialUploader from "./components/FlashPartialUploader";
 
 import "./index.css";
 
@@ -82,6 +83,8 @@ export default function App() {
                         path="/generate/flashcards"
                         element={user ? <FlashcardGeneratorPage/> : <Navigate to="/login"/>}
                     />
+                    <Route path="/partial" element={user ? <FlashPartialUploader/> : <Navigate to="/login"/>}/>
+
                 </Routes>
             </Router>
         </AuthProvider>
