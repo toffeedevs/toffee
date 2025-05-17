@@ -89,22 +89,38 @@ export default function FlashPartialUploader() {
 
             const textLayerDiv = document.createElement("div");
             textLayerDiv.className = "textLayer";
+            textLayerDiv.style.position = "absolute";
             textLayerDiv.style.top = 0;
             textLayerDiv.style.left = 0;
             textLayerDiv.style.height = `${viewport.height}px`;
             textLayerDiv.style.width = `${viewport.width}px`;
-
             wrapper.appendChild(textLayerDiv);
+
             container.appendChild(wrapper);
 
             const textContent = await page.getTextContent();
-            await pdfjsLib.renderTextLayer({
-                textContent,
-                container: textLayerDiv,
-                viewport,
-                textDivs: [],
-            }).promise;
+            const textItems = textContent.items;
+            const textDivs = [];
 
+            textItems.forEach((item) => {
+                const span = document.createElement("span");
+                span.textContent = item.str;
+
+                const transform = pdfjsLib.Util.transform(viewport.transform, item.transform);
+                const [fontHeightPx, x, y] = [Math.abs(transform[3]), transform[4], transform[5]];
+
+                span.style.position = "absolute";
+                span.style.left = `${x}px`;
+                span.style.top = `${y - fontHeightPx}px`;
+                span.style.fontSize = `${fontHeightPx}px`;
+                span.style.fontFamily = item.fontName;
+                span.className = "textLayerItem";
+
+                textLayerDiv.appendChild(span);
+                textDivs.push(span);
+            });
+
+            // Highlight selection
             textLayerDiv.addEventListener("mouseup", () => {
                 const selection = window.getSelection();
                 const selectedStr = selection.toString().trim();
@@ -116,9 +132,7 @@ export default function FlashPartialUploader() {
 
                 spans.forEach((span) => {
                     const match = Array.from(textLayerDiv.querySelectorAll("span")).find(
-                        (el) =>
-                            el.textContent === span.textContent &&
-                            !el.classList.contains("highlighted")
+                        (el) => el.textContent === span.textContent && !el.classList.contains("highlighted")
                     );
                     if (match) match.classList.add("highlighted");
                 });
