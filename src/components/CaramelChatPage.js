@@ -5,7 +5,8 @@ import {
   getUserDocuments,
   deleteDocument as deleteDocumentById,
   saveMessageToDocument,
-  getMessagesForDocument
+  getMessagesForDocument,
+  saveDocument
 } from "../services/firestoreService";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -52,6 +53,11 @@ export default function CaramelChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const startNewChat = async () => {
+    const newId = await saveDocument(currentUser.uid, "", "New Chat");
+    navigate(`/chat/${newId}`);
+  };
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -107,7 +113,6 @@ export default function CaramelChatPage() {
 
   return (
     <div className="h-screen w-screen bg-black text-white flex">
-      {/* Sidebar */}
       {sidebarOpen && (
         <div className="w-64 bg-gray-900 p-4 border-r border-gray-700 overflow-y-auto">
           <h2 className="text-lg font-bold text-yellow-400 mb-4 flex justify-between items-center">
@@ -120,7 +125,7 @@ export default function CaramelChatPage() {
             </button>
           </h2>
           <button
-            onClick={() => navigate("/chat/new")}
+            onClick={startNewChat}
             className="w-full text-center text-sm bg-yellow-500 text-black px-2 py-1 rounded hover:bg-yellow-600 mb-4"
           >
             + New Chat
@@ -151,7 +156,6 @@ export default function CaramelChatPage() {
         </div>
       )}
 
-      {/* Chat Content */}
       <div className="flex flex-col flex-1 relative">
         <div className="py-4 flex justify-between items-center px-4">
           <div className="flex gap-2">
