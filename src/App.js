@@ -23,6 +23,7 @@ import MCQGeneratorPage from "./pages/MCQGeneratorPage";
 import FITBGeneratorPage from "./pages/FITBGeneratorPage";
 import FlashcardGeneratorPage from "./pages/FlashcardGeneratorPage";
 import FlashPartialUploader from "./components/FlashPartialUploader";
+import CaramelChatPage from "./components/CaramelChatPage"; // or pages
 
 import "./index.css";
 
@@ -84,7 +85,7 @@ export default function App() {
                         element={user ? <FlashcardGeneratorPage/> : <Navigate to="/login"/>}
                     />
                     <Route path="/partial" element={user ? <FlashPartialUploader/> : <Navigate to="/login"/>}/>
-
+                    <Route path="/chat/:docId" element={user ? <CaramelChatPage /> : <Navigate to="/login" />} />
                 </Routes>
             </Router>
         </AuthProvider>

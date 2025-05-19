@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useState} from "react";
 import {useNavigate} from "react-router-dom";
 
 export default function DocumentCard({
@@ -11,6 +11,7 @@ export default function DocumentCard({
                                          onShare,
                                      }) {
     const navigate = useNavigate();
+    const [showChat, setShowChat] = useState(false);
 
     return (
         <div
@@ -40,7 +41,6 @@ export default function DocumentCard({
                 >
                     ✅ True/False
                 </button>
-
                 <button
                     onClick={() => navigate("/generate/fitb", {state: {docId: doc.id, docText: doc.text}})}
                     className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition"
@@ -53,13 +53,23 @@ export default function DocumentCard({
                 >
                     🃏 Flashcards
                 </button>
-                <button onClick={onStartFeynman}
-                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
+                <button
+                    onClick={onStartFeynman}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition"
+                >
                     🧠 Feynman
                 </button>
-                <button onClick={onShare}
-                        className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition">
+                <button
+                    onClick={onShare}
+                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg transition"
+                >
                     🌍 Share
+                </button>
+                <button
+                    onClick={() => navigate(`/chat/${doc.id}`)}
+                    className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition"
+                >
+                    💬 Caramel
                 </button>
             </div>
         </div>
