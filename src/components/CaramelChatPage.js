@@ -3,10 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   getUserDocuments,
-  deleteDocument as deleteDocumentById,
+  deleteThreadMessage,
   saveMessageToDocument,
   getMessagesForDocument,
-  saveDocument,
 } from "../services/firestoreService";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -19,9 +18,9 @@ export default function CaramelChatPage() {
 
   const [doc, setDoc] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [threads, setThreads] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const bottomRef = useRef(null);
 
@@ -35,17 +34,14 @@ export default function CaramelChatPage() {
   }, [currentUser, docId]);
 
   useEffect(() => {
-    const loadHistory = async () => {
-      const docs = await getUserDocuments(currentUser.uid);
-      setHistory(docs);
-    };
-    if (currentUser) loadHistory();
-  }, [currentUser]);
-
-  useEffect(() => {
     const loadMessages = async () => {
       const msgs = await getMessagesForDocument(currentUser.uid, docId);
-      setMessages(msgs);
+      const normal = msgs.filter((m) => m.text !== "__THREAD_SAVE__");
+      const savedThreads = msgs
+        .filter((m) => m.text === "__THREAD_SAVE__")
+        .sort((a, b) => new Date(b.thread?.endedAt) - new Date(a.thread?.endedAt));
+      setMessages(normal);
+      setThreads(savedThreads);
     };
     if (currentUser && docId) loadMessages();
   }, [currentUser, docId]);
@@ -55,8 +51,21 @@ export default function CaramelChatPage() {
   }, [messages]);
 
   const startNewChat = async () => {
-    const newId = await saveDocument(currentUser.uid, "", "New Chat");
-    navigate(`/chat/${newId}`);
+    if (messages.length > 0) {
+      const threadEntry = {
+        sender: "system",
+        text: "__THREAD_SAVE__",
+        thread: {
+          messages,
+          endedAt: new Date().toISOString(),
+        },
+        time: new Date().toLocaleTimeString(),
+      };
+
+      await saveMessageToDocument(currentUser.uid, docId, threadEntry);
+      setThreads((prev) => [threadEntry, ...prev]);
+    }
+    setMessages([]);
   };
 
   const sendMessage = async () => {
@@ -116,7 +125,7 @@ export default function CaramelChatPage() {
       {sidebarOpen && (
         <div className="w-64 bg-black p-4 border-r border-purple-600 overflow-y-auto">
           <h2 className="text-lg font-bold text-white mb-4 flex justify-between items-center">
-            Chat History
+            Chat Threads
             <button
               onClick={() => setSidebarOpen(false)}
               className="text-sm bg-red-500 px-2 py-1 rounded hover:bg-red-600 transition transform duration-200 hover:scale-105"
@@ -124,29 +133,35 @@ export default function CaramelChatPage() {
               ✕
             </button>
           </h2>
+
           <button
             onClick={startNewChat}
-            className="w-full text-center text-sm bg-purple-600 px-2 py-1 rounded hover:bg-purple-700 transition transform duration-200 hover:scale-105 mb-4"
+            className="w-full text-center text-sm bg-purple-600 px-2 py-1 rounded hover:bg-purple-700 mb-4 transition transform duration-200 hover:scale-105"
           >
             + New Chat
           </button>
-          <ul className="space-y-2">
-            {history.map((session, idx) => (
+
+          <ul className="space-y-2 text-sm text-purple-300 mt-2">
+            {threads.map((t, i) => (
               <li
-                key={idx}
-                onClick={() => navigate(`/chat/${session.id}`)}
-                className="cursor-pointer hover:text-purple-400 flex justify-between items-center transition duration-200"
+                key={i}
+                className="truncate flex justify-between items-center gap-2 cursor-pointer hover:text-purple-400"
               >
-                <span className="truncate w-4/5">
-                  {session.summary || `Session ${idx + 1}`}
+                <span
+                  className="w-full"
+                  onClick={() => setMessages(t.thread?.messages || [])}
+                >
+                  🗂 {new Date(t.thread?.endedAt).toLocaleString()}
                 </span>
                 <button
                   onClick={async (e) => {
                     e.stopPropagation();
-                    await deleteDocumentById(currentUser.uid, session.id);
-                    setHistory(history.filter((doc) => doc.id !== session.id));
+                    await deleteThreadMessage(currentUser.uid, docId, t.thread?.endedAt);
+                    setThreads((prev) =>
+                      prev.filter((thread) => thread.thread?.endedAt !== t.thread?.endedAt)
+                    );
                   }}
-                  className="text-red-500 hover:text-red-400 transition"
+                  className="text-red-500 hover:text-red-400 transition text-sm"
                 >
                   ✕
                 </button>
@@ -170,7 +185,7 @@ export default function CaramelChatPage() {
                 onClick={() => setSidebarOpen(true)}
                 className="bg-purple-600 px-3 py-1 rounded hover:bg-purple-700 text-sm transition transform hover:scale-105"
               >
-                ☰ History
+                ☰ Threads
               </button>
             )}
           </div>

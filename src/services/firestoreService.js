@@ -188,3 +188,18 @@ export async function incrementQuizCount(userId, type, correct, total) {
     { merge: true }
   );
 }
+
+export const deleteThreadMessage = async (uid, docId, endedAt) => {
+  const msgRef = collection(db, "users", uid, "documents", docId, "messages");
+  const snap = await getDocs(msgRef);
+  for (const doc of snap.docs) {
+    const data = doc.data();
+    if (
+      data.text === "__THREAD_SAVE__" &&
+      data.thread?.endedAt === endedAt
+    ) {
+      await deleteDoc(doc.ref);
+      break;
+    }
+  }
+};
