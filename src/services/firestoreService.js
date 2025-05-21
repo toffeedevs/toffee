@@ -13,6 +13,7 @@ import {
   setDoc,
   where
 } from "firebase/firestore";
+import SHA256 from "crypto-js/sha256";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAL1dQyCk6bGrKyOAZStLnab9MBxIeAodI",
@@ -27,14 +28,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ✅ Hashing helper
 export async function computeTextHash(text) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  return SHA256(text).toString();
 }
+
 
 // ✅ Document operations
 export async function deleteDocument(userId, docId) {
