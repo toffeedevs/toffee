@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import LoadingOverlay from "../components/LoadingOverlay"; // ✅ IMPORT
 
 export default function MCQGeneratorPage() {
   const { state } = useLocation(); // { docId, docText }
@@ -8,13 +9,12 @@ export default function MCQGeneratorPage() {
   const [focusAreas, setFocusAreas] = useState("");
   const [difficulty, setDifficulty] = useState("Easy");
   const [sampleQuestions, setSampleQuestions] = useState("");
-  const [numQuestions, setNumQuestions] = useState(10); // 👈 default to 10
+  const [numQuestions, setNumQuestions] = useState(10);
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      // 🧹 Step 1: Clean the text using OpenRouter LLM
       const cleanRes = await axios.post(
         "https://openrouter.ai/api/v1/chat/completions",
         {
@@ -38,10 +38,10 @@ ${state.docText}`
       );
 
       let cleanedText = cleanRes.data.choices[0].message.content.trim();
-      cleanedText = JSON.stringify(cleanedText); // encode safely as a string
+      cleanedText = JSON.stringify(cleanedText);
 
       const payload = {
-        number_of_questions: numQuestions, // 👈 included in payload
+        number_of_questions: numQuestions,
         source_document: cleanedText,
         focus_areas: focusAreas.split(",").map((s) => s.trim()),
         sample_questions: sampleQuestions
@@ -50,7 +50,6 @@ ${state.docText}`
         difficulty
       };
 
-      // ✅ Optional JSON safety check
       try {
         JSON.stringify(payload);
       } catch (err) {
@@ -60,7 +59,6 @@ ${state.docText}`
         return;
       }
 
-      // 📝 Step 2: Generate MCQs
       const res = await axios.post(
         "https://nougat-omega.vercel.app/nougat/mcqtext",
         payload,
@@ -85,7 +83,8 @@ ${state.docText}`
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex items-center justify-center px-4">
-      <div className="bg-gray-900 p-8 rounded-xl w-full max-w-md">
+      {loading && <LoadingOverlay message="Generating MCQs..." />} {/* ✅ ADDED */}
+      <div className="bg-gray-900 p-8 rounded-xl w-full max-w-md relative z-10">
         <h1 className="text-2xl font-bold text-purple-400 mb-4">Configure MCQ Generation</h1>
 
         <div className="mb-3">

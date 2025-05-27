@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
+import LoadingOverlay from "../components/LoadingOverlay"; // ✅ Import
 
 export default function FeynmanSession() {
   const { state } = useLocation(); // { docId, text }
@@ -13,11 +14,13 @@ export default function FeynmanSession() {
   const [feedback, setFeedback] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sessionDone, setSessionDone] = useState(false);
+  const [initializing, setInitializing] = useState(true); // ✅ For fetching keyterms
 
   useEffect(() => {
     if (!text) return;
 
     const fetchKeyterms = async () => {
+      setInitializing(true);
       try {
         const res = await axios.post(
           "https://nougat-omega.vercel.app/nougat/keyterms",
@@ -33,6 +36,8 @@ export default function FeynmanSession() {
         setKeyterms(extractedQuestions);
       } catch (err) {
         console.error("Error fetching keyterms:", err);
+      } finally {
+        setInitializing(false);
       }
     };
 
@@ -89,6 +94,10 @@ export default function FeynmanSession() {
     );
   }
 
+  if (initializing) {
+    return <LoadingOverlay message="Preparing Feynman questions..." />;
+  }
+
   if (sessionDone) {
     return (
       <div className="text-center text-white mt-20">
@@ -105,7 +114,9 @@ export default function FeynmanSession() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10 text-white">
+    <div className="max-w-2xl mx-auto px-6 py-10 text-white relative">
+      {loading && <LoadingOverlay message="Analyzing your explanation..." />} {/* ✅ Added */}
+
       <h1 className="text-3xl font-bold mb-4 text-purple-400">🧠 Feynman Recall</h1>
 
       <div className="mb-6">
