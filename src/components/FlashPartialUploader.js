@@ -74,7 +74,8 @@ export default function FlashPartialUploader() {
 
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
-            const viewport = page.getViewport({scale: 1.5});
+            const containerWidth = container.clientWidth || 800;
+            const viewport = page.getViewport({scale: containerWidth / page.getViewport({scale: 1}).width});
 
             const canvas = document.createElement("canvas");
             const context = canvas.getContext("2d");
