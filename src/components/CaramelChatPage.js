@@ -82,13 +82,15 @@ export default function CaramelChatPage() {
         setLoading(true);
 
         // Step 1: Build chat transcript (including the new input)
-        const structuredContext = [...messages, userMsg]
+        const fullContext = [...messages, userMsg]
             .filter((m) => m.text !== "__THREAD_SAVE__")
-            .map((m) => ({
-                sender: m.sender === "user" ? "User" : "Caramel",
-                text: m.text
-            }));
+            .map((m) => {
+                const role = m.sender === "user" ? "User" : "Caramel";
+                return `${role}: ${m.text}`;
+            })
+            .join("\n");
 
+        console.log("Transcript sent to summarizer:\n", fullContext);
 
         // Step 2: Summarize the context
         let summary = "";
@@ -96,7 +98,7 @@ export default function CaramelChatPage() {
             const summaryRes = await fetch("https://nougat-omega.vercel.app/chatbot/summarize", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({text: structuredContext}),
+                body: JSON.stringify({text: fullContext}),
             });
 
             const summaryData = await summaryRes.json();
