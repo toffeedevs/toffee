@@ -284,9 +284,17 @@ export default function CaramelChatPage() {
                     <button
                         onClick={sendMessage}
                         disabled={loading}
-                        className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-semibold text-white transition transform duration-200 hover:scale-105"
+                        className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-semibold text-white transition transform duration-200 hover:scale-105 flex items-center justify-center gap-2"
                     >
-                        {loading ? "..." : "Send"}
+                        {loading ? (
+                            <>
+                                <span
+                                    className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                Thinking...
+                            </>
+                        ) : (
+                            "Send"
+                        )}
                     </button>
                 </div>
             </div>

@@ -46,6 +46,15 @@ a:focus {
   transition: background-color 0.3s ease;
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
 
 .react-calendar-heatmap .color-empty     { fill: #1f2937; }
 .react-calendar-heatmap .color-scale-1  { fill: #4b5563; }
