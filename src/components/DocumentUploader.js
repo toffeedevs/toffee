@@ -10,8 +10,8 @@ GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3
 
 export default function DocumentUploader({ onDocumentCreated }) {
   const { currentUser } = useAuth();
-  const navigate = useNavigate(); // ✅ Needed for Flash Partial button
-  const [mode, setMode] = useState(null); // "text" | "file" | "youtube"
+  const navigate = useNavigate();
+  const [mode, setMode] = useState(null);
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -129,6 +129,12 @@ export default function DocumentUploader({ onDocumentCreated }) {
             className="bg-purple-700 text-white px-6 py-3 rounded-xl w-full hover:bg-purple-800"
           >
             ✂️ Flash Partial
+          </button>
+          <button
+            onClick={() => navigate("/import/anki")}
+            className="bg-purple-700 text-white px-6 py-3 rounded-xl w-full hover:bg-purple-800"
+          >
+            🗃️ Import Anki Deck
           </button>
         </div>
       )}

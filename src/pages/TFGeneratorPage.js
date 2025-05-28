@@ -15,33 +15,9 @@ export default function TFGeneratorPage() {
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      const cleanRes = await axios.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        {
-          model: "google/gemini-2.0-flash-lite-001",
-          messages: [
-            {
-              role: "user",
-              content: `Please clean this text for JSON safety. Transcribe into a clean normal text paragraph.
-
-TEXT:
-${state.docText}`
-            }
-          ]
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.REACT_APP_OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
-      const cleanedText = cleanRes.data.choices[0].message.content.trim();
-
       const payload = {
         number_of_questions: numQuestions,
-        source_document: cleanedText,
+        source_document: state.docText,
         focus_areas: focusAreas.split(",").map((s) => s.trim()),
         sample_questions: sampleQuestions
           ? sampleQuestions.split(";").map((s) => s.trim())
