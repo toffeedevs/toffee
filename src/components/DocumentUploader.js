@@ -87,7 +87,10 @@ export default function DocumentUploader({ onDocumentCreated }) {
       );
 
       const summary = res.data.choices[0].message.content.trim();
-      await saveDocument(currentUser.uid, text, summary);
+
+      await saveDocument(currentUser.uid, text, summary, {
+        isAnki: false, // ✅ Important for non-Anki uploads
+      });
 
       setText("");
       setFileName("");

@@ -1,48 +1,73 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
-import LoadingOverlay from "../components/LoadingOverlay"; // ✅ Import
+import LoadingOverlay from "../components/LoadingOverlay";
+import { getDocument, updateDocumentText } from "../services/firestoreService";
+import { useAuth } from "../context/AuthContext";
 
 export default function FeynmanSession() {
+  const { currentUser } = useAuth();
   const { state } = useLocation(); // { docId, text }
   const navigate = useNavigate();
-  const { docId, text } = state || {};
+  const { docId } = state || {};
 
+  const [text, setText] = useState("");
   const [keyterms, setKeyterms] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
   const [feedback, setFeedback] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sessionDone, setSessionDone] = useState(false);
-  const [initializing, setInitializing] = useState(true); // ✅ For fetching keyterms
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
-    if (!text) return;
+    const initializeSession = async () => {
+      if (!docId || !currentUser) return;
 
-    const fetchKeyterms = async () => {
-      setInitializing(true);
       try {
-        const res = await axios.post(
+        const docData = await getDocument(currentUser.uid, docId);
+        if (!docData) throw new Error("Document not found");
+
+        let rawText = docData.text || "";
+
+        // If it's an Anki doc, fetch real content
+        if (docData.isAnki && docData.ankiUrl) {
+          const res = await axios.post(
+            "https://nougat-omega.vercel.app/nougat/import-anki",
+            { url: docData.ankiUrl },
+            { headers: { "Content-Type": "application/json" } }
+          );
+          const cards = res.data.cards || [];
+          rawText = cards.map((card) => `Q: ${card.front}\nA: ${card.back}`).join("\n\n");
+
+          // Overwrite Firestore 'text' field with resolved content for future use
+          await updateDocumentText(currentUser.uid, docId, rawText);
+        }
+
+        setText(rawText);
+
+        // Now fetch keyterms
+        const keytermRes = await axios.post(
           "https://nougat-omega.vercel.app/nougat/keyterms",
-          { text },
+          { text: rawText },
           { headers: { "Content-Type": "application/json" } }
         );
-
-        const termsArray = Array.isArray(res.data.terms) ? res.data.terms : [];
+        const termsArray = Array.isArray(keytermRes.data.terms) ? keytermRes.data.terms : [];
         const extractedQuestions = termsArray
           .map(item => item.question)
           .filter(q => q !== null && q !== undefined);
 
         setKeyterms(extractedQuestions);
       } catch (err) {
-        console.error("Error fetching keyterms:", err);
+        console.error("Feynman initialization failed:", err);
+        alert("Failed to initialize Feynman session.");
       } finally {
         setInitializing(false);
       }
     };
 
-    fetchKeyterms();
-  }, [text]);
+    initializeSession();
+  }, [docId, currentUser]);
 
   const handleSubmit = async () => {
     if (!userAnswer.trim()) return;
@@ -53,11 +78,7 @@ export default function FeynmanSession() {
     try {
       const res = await axios.post(
         "https://nougat-omega.vercel.app/nougat/feynman",
-        {
-          term,
-          text,
-          response: userAnswer,
-        },
+        { term, text, response: userAnswer },
         { headers: { "Content-Type": "application/json" } }
       );
 
@@ -80,6 +101,10 @@ export default function FeynmanSession() {
     }
   };
 
+  if (initializing) {
+    return <LoadingOverlay message="Preparing Feynman questions..." />;
+  }
+
   if (!docId || !text) {
     return (
       <div className="text-center mt-20 text-white">
@@ -92,10 +117,6 @@ export default function FeynmanSession() {
         </button>
       </div>
     );
-  }
-
-  if (initializing) {
-    return <LoadingOverlay message="Preparing Feynman questions..." />;
   }
 
   if (sessionDone) {
@@ -115,7 +136,7 @@ export default function FeynmanSession() {
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10 text-white relative">
-      {loading && <LoadingOverlay message="Analyzing your explanation..." />} {/* ✅ Added */}
+      {loading && <LoadingOverlay message="Analyzing your explanation..." />}
 
       <h1 className="text-3xl font-bold mb-4 text-purple-400">🧠 Feynman Recall</h1>
 

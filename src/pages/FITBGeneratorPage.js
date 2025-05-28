@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
-import LoadingOverlay from "../components/LoadingOverlay"; // ✅ ADDED
+import LoadingOverlay from "../components/LoadingOverlay";
+import { getDocument, updateDocumentText } from "../services/firestoreService";
+import { useAuth } from "../context/AuthContext";
 
 export default function FITBGeneratorPage() {
-  const { state } = useLocation(); // { docId, docText }
+  const { state } = useLocation(); // expects { docId }
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
+
   const [focusAreas, setFocusAreas] = useState("");
   const [difficulty, setDifficulty] = useState("Easy");
   const [sampleQuestions, setSampleQuestions] = useState("");
@@ -13,40 +17,56 @@ export default function FITBGeneratorPage() {
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
+    if (!state?.docId || !currentUser) return alert("Missing document.");
     setLoading(true);
+
     try {
+      const docData = await getDocument(currentUser.uid, state.docId);
+      if (!docData) throw new Error("Document not found.");
+
+      let text = docData.text || "";
+
+      if (docData.isAnki && docData.ankiUrl) {
+        const res = await axios.post("https://nougat-omega.vercel.app/nougat/import-anki", {
+          url: docData.ankiUrl,
+        });
+        const cards = res.data.cards || [];
+        text = cards.map((card) => `Q: ${card.front}\nA: ${card.back}`).join("\n\n");
+
+        // 🔁 Update Firestore so all future references use actual text
+        await updateDocumentText(currentUser.uid, state.docId, text);
+      }
+
+      if (!text.trim()) {
+        alert("No document text available.");
+        return;
+      }
+
       const payload = {
         number_of_questions: numQuestions,
-        source_document: state.docText,
+        source_document: text,
         focus_areas: focusAreas.split(",").map((s) => s.trim()),
         sample_questions: sampleQuestions
           ? sampleQuestions.split(";").map((s) => s.trim())
           : [],
-        difficulty
+        difficulty,
       };
 
-      try {
-        JSON.stringify(payload);
-      } catch (err) {
-        console.error("Payload contains invalid JSON:", err);
-        alert("Input contains invalid characters. Please clean your text and try again.");
-        setLoading(false);
-        return;
-      }
+      JSON.stringify(payload); // validate structure before sending
 
       const res = await axios.post("https://nougat-omega.vercel.app/nougat/fitb", payload, {
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       });
 
       navigate("/quiz/fitb", {
         state: {
           type: "fitb",
-          questions: res.data.questions
-        }
+          questions: res.data.questions,
+        },
       });
     } catch (err) {
+      console.error("❌ FITB generation failed:", err);
       alert("Failed to generate Fill-in-the-Blank questions.");
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -54,7 +74,7 @@ export default function FITBGeneratorPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex items-center justify-center px-4">
-      {loading && <LoadingOverlay message="Generating Fill-in-the-Blank..." />} {/* ✅ OVERLAY */}
+      {loading && <LoadingOverlay message="Generating Fill-in-the-Blank..." />}
       <div className="bg-gray-900 p-8 rounded-xl w-full max-w-md relative z-10">
         <h1 className="text-2xl font-bold text-purple-400 mb-4">Configure Fill-in-the-Blank Generation</h1>
 

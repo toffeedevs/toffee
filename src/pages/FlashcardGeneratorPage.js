@@ -1,35 +1,67 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
-import LoadingOverlay from "../components/LoadingOverlay"; // ✅ Import if using loading overlay
+import LoadingOverlay from "../components/LoadingOverlay";
+import { getDocument, updateDocumentText } from "../services/firestoreService";
+import { useAuth } from "../context/AuthContext";
 
 export default function FlashcardGeneratorPage() {
-  const { state } = useLocation(); // { docId, docText }
+  const { state } = useLocation(); // expects { docId }
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
 
   const [focusAreas, setFocusAreas] = useState("");
   const [sampleQuestions, setSampleQuestions] = useState("");
   const [difficulty, setDifficulty] = useState("Easy");
-  const [numQuestions, setNumQuestions] = useState(10); // ✅ NEW
+  const [numQuestions, setNumQuestions] = useState(10);
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
+    if (!state?.docId || !currentUser) return alert("Missing document.");
     setLoading(true);
+
     try {
-      const res = await axios.post("https://nougat-omega.vercel.app/nougat/cards", {
-        number_of_questions: numQuestions, // ✅ INCLUDED
-        source_document: state.docText,
+      const docData = await getDocument(currentUser.uid, state.docId);
+      if (!docData) throw new Error("Document not found.");
+
+      let text = docData.text || "";
+
+      if (docData.isAnki && docData.ankiUrl) {
+        const res = await axios.post("https://nougat-omega.vercel.app/nougat/import-anki", {
+          url: docData.ankiUrl,
+        });
+        const cards = res.data.cards || [];
+        text = cards.map((card) => `Q: ${card.front}\nA: ${card.back}`).join("\n\n");
+
+        // 🔁 Persist the converted text for future re-use
+        await updateDocumentText(currentUser.uid, state.docId, text);
+      }
+
+      if (!text.trim()) {
+        alert("No document text available.");
+        return;
+      }
+
+      const payload = {
+        number_of_questions: numQuestions,
+        source_document: text,
         focus_areas: focusAreas.split(",").map((s) => s.trim()),
         sample_questions: sampleQuestions ? sampleQuestions.split(";").map((s) => s.trim()) : [],
-        difficulty
+        difficulty,
+      };
+
+      console.log(payload)
+
+      const res = await axios.post("https://nougat-omega.vercel.app/nougat/cards", payload, {
+        headers: { "Content-Type": "application/json" },
       });
 
       navigate("/flashcards", {
         state: {
           docId: state.docId,
-          text: state.docText,
-          flashcards: res.data.cards
-        }
+          text,
+          flashcards: res.data.cards,
+        },
       });
     } catch (err) {
       alert("Failed to generate flashcards.");

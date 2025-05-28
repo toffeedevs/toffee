@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
-import LoadingOverlay from "../components/LoadingOverlay"; // ✅ IMPORT
+import LoadingOverlay from "../components/LoadingOverlay";
+import { getDocument, updateDocumentText } from "../services/firestoreService";
+import { useAuth } from "../context/AuthContext";
 
 export default function MCQGeneratorPage() {
-  const { state } = useLocation(); // { docId, docText }
+  const { currentUser } = useAuth();
+  const { state } = useLocation(); // expects { docId }
   const navigate = useNavigate();
+
   const [focusAreas, setFocusAreas] = useState("");
   const [difficulty, setDifficulty] = useState("Easy");
   const [sampleQuestions, setSampleQuestions] = useState("");
@@ -13,44 +17,56 @@ export default function MCQGeneratorPage() {
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
+    if (!state?.docId || !currentUser) return alert("Missing document.");
+
     setLoading(true);
     try {
+      const docData = await getDocument(currentUser.uid, state.docId);
+      if (!docData) throw new Error("Document not found.");
+
+      let text = docData.text || "";
+
+      // If it's an Anki deck and the text field holds a URL
+      if (docData.isAnki && text.startsWith("https://")) {
+        const res = await axios.post("https://nougat-omega.vercel.app/nougat/import-anki", {
+          url: text,
+        });
+        const cards = res.data.cards || [];
+        text = cards.map((card) => `Q: ${card.front}\nA: ${card.back}`).join("\n\n");
+
+        // 🔁 Replace the URL with parsed text in Firestore
+        await updateDocumentText(currentUser.uid, state.docId, text);
+      }
+
+      if (!text.trim()) return alert("No document text available.");
+
       const payload = {
         number_of_questions: numQuestions,
-        source_document: state.docText,
+        source_document: text,
         focus_areas: focusAreas.split(",").map((s) => s.trim()),
         sample_questions: sampleQuestions
           ? sampleQuestions.split(";").map((s) => s.trim())
           : [],
-        difficulty
+        difficulty,
       };
-
-      try {
-        JSON.stringify(payload);
-      } catch (err) {
-        console.error("Payload contains invalid JSON:", err);
-        alert("Input contains invalid characters. Please clean your text and try again.");
-        setLoading(false);
-        return;
-      }
 
       const res = await axios.post(
         "https://nougat-omega.vercel.app/nougat/mcqtext",
         payload,
         {
-          headers: { "Content-Type": "application/json" }
+          headers: { "Content-Type": "application/json" },
         }
       );
 
       navigate("/quiz/mcq", {
         state: {
           type: "mcq",
-          questions: res.data.questions
-        }
+          questions: res.data.questions,
+        },
       });
     } catch (err) {
+      console.error("❌ MCQ generation failed:", err);
       alert("Failed to generate MCQs.");
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -58,7 +74,7 @@ export default function MCQGeneratorPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 text-white flex items-center justify-center px-4">
-      {loading && <LoadingOverlay message="Generating MCQs..." />} {/* ✅ ADDED */}
+      {loading && <LoadingOverlay message="Generating MCQs..." />}
       <div className="bg-gray-900 p-8 rounded-xl w-full max-w-md relative z-10">
         <h1 className="text-2xl font-bold text-purple-400 mb-4">Configure MCQ Generation</h1>
 
